@@ -1,0 +1,45 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create VPC and Nets For ECS
+
+Resources:
+  # Internet网关
+  CFInternetGW:
+      Type: "AWS::EC2::InternetGateway"
+      Properties:
+          Tags:
+              - Key: Name
+                Value: CFInternetGW
+  # VPC
+  QYTVPC:
+    Type: "AWS::EC2::VPC"
+    DeletionPolicy: Delete
+    Properties:
+      CidrBlock: 10.3.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: QYT_ECS_VPC
+
+  # 关联Internet GW到VPC
+  AttachGW:
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties:
+      VpcId: !Ref QYTVPC
+      InternetGatewayId: !Ref CFInternetGW
+
+  # 网络
+  OutsideNet:
+    Type: "AWS::EC2::Subnet"
+    DeletionPolicy: Delete
+    Properties:
+      AvailabilityZone: # 选择第一个（0）AZ
+        "Fn::Select":
+          - 0
+          - "Fn::GetAZs": ""
+      CidrBlock: 10.3.11.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: ECS_Net
+      VpcId: !Ref QYTVPC

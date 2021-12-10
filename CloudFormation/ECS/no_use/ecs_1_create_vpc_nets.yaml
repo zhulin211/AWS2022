@@ -14,7 +14,7 @@ Resources:
     Type: "AWS::EC2::VPC"
     DeletionPolicy: Delete
     Properties:
-      CidrBlock: 10.3.0.0/16
+      CidrBlock: 10.6.0.0/16
       EnableDnsSupport: true
       EnableDnsHostnames: true
       Tags:
@@ -28,6 +28,38 @@ Resources:
       VpcId: !Ref QYTVPC
       InternetGatewayId: !Ref CFInternetGW
 
+  # 网络OutsideNet1
+  OutsideNet1:
+    Type: "AWS::EC2::Subnet"
+    DeletionPolicy: Delete
+    Properties:
+      AvailabilityZone: # 选择第一个（0）AZ
+        "Fn::Select":
+          - 0
+          - "Fn::GetAZs": ""
+      CidrBlock: 10.6.1.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: OutsideNet1
+      VpcId: !Ref QYTVPC
+
+  # 网络OutsideNet2
+  OutsideNet2:
+    Type: "AWS::EC2::Subnet"
+    DeletionPolicy: Delete
+    Properties:
+      AvailabilityZone: # 选择第一个（0）AZ
+        "Fn::Select":
+          - 2
+          - "Fn::GetAZs": ""
+      CidrBlock: 10.6.2.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: OutsideNet2
+      VpcId: !Ref QYTVPC
+
   # 网络ECS_Net1
   ECSNet1:
     Type: "AWS::EC2::Subnet"
@@ -37,7 +69,7 @@ Resources:
         "Fn::Select":
           - 0
           - "Fn::GetAZs": ""
-      CidrBlock: 10.3.11.0/24
+      CidrBlock: 10.6.11.0/24
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
@@ -53,12 +85,35 @@ Resources:
         "Fn::Select":
           - 2
           - "Fn::GetAZs": ""
-      CidrBlock: 10.3.12.0/24
+      CidrBlock: 10.6.12.0/24
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
           Value: ECS_Net2
       VpcId: !Ref QYTVPC
+
+  # 申请EIP
+  NATEIP:
+    Type: "AWS::EC2::EIP"
+
+  # 创建NAT Gateway关联子网和EIP
+  NATGW:
+      Type: "AWS::EC2::NatGateway"
+      Properties:
+          AllocationId: !GetAtt NATEIP.AllocationId
+          SubnetId: !Ref OutsideNet1
+          Tags:
+              - Key: Name
+                Value: GW
+
+  # 路由表  OutsideRouteTable, 关联VPC
+  OutsideRouteTable:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref QYTVPC
+      Tags:
+        - Key: Name
+          Value: OutsideRouteTable
 
   # 路由表  ECSRouteTable, 关联VPC
   ECSRouteTable:
@@ -69,33 +124,57 @@ Resources:
               - Key: Name
                 Value: ECS_Route_Table
 
-  # 关联子网ECS_Net1到路由表ECS_Route_Table
+  # 关联子网OutsideNet1到路由表OutsideRouteTable
+  OutsideNet1Association:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref OutsideRouteTable
+      SubnetId: !Ref OutsideNet1
+
+  # 关联子网OutsideNet2到路由表ECS_Route_Table1
+  OutsideNet2Association:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref OutsideRouteTable
+      SubnetId: !Ref OutsideNet2
+
+
+  # 关联子网ECS_Net1到路由表ECS_Route_Table1
   ECSNET1Association:
       Type: "AWS::EC2::SubnetRouteTableAssociation"
       Properties:
           RouteTableId: !Ref ECSRouteTable
           SubnetId: !Ref ECSNet1
 
-  # 关联子网ECS_Net2到路由表ECS_Route_Table
+  # 关联子网ECS_Net2到路由表ECS_Route_Table2
   ECSNET2Association:
       Type: "AWS::EC2::SubnetRouteTableAssociation"
       Properties:
         RouteTableId: !Ref ECSRouteTable
         SubnetId: !Ref ECSNet2
 
-  # 配置OutsideRouteTable路由表的默认路由
+  # 配置OutsideDefaultRoute路由表的默认路由
+  OutsideDefaultRoute:
+    Type: "AWS::EC2::Route"
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref CFInternetGW
+      RouteTableId: !Ref OutsideRouteTable
+
+  # 配置ECSDefaultRoute路由表的默认路由
   ECSDefaultRoute:
       Type: "AWS::EC2::Route"
       Properties:
           DestinationCidrBlock: 0.0.0.0/0
-          GatewayId: !Ref CFInternetGW
+          NatGatewayId: !Ref NATGW
           RouteTableId: !Ref ECSRouteTable
-  # 配置EC2使用的SecurityGroup
+
+  # 配置SecurityGroup
   ECSSecurityGroup:
       Type: "AWS::EC2::SecurityGroup"
       Properties:
           GroupName: ecs_sg
-          GroupDescription: Allow tcp/80 and tcp/22
+          GroupDescription: Allow HTTP ,HTTPS and SSH
           VpcId: !Ref QYTVPC
           SecurityGroupIngress:
               - IpProtocol: tcp
@@ -105,6 +184,10 @@ Resources:
               - IpProtocol: tcp
                 FromPort: 80
                 ToPort: 80
+                CidrIp: 0.0.0.0/0
+              - IpProtocol: tcp
+                FromPort: 22
+                ToPort: 22
                 CidrIp: 0.0.0.0/0
           Tags:
             - Key: Name
@@ -141,7 +224,19 @@ Outputs: # 输出内容，并且可以被其他Stack引用
         Value: !Ref ECSNet2
         Export:
             Name: !Sub ${AWS::StackName}-ECSNet2-ID
+    # 子网OutsideNet1， 输出名为${AWS::StackName}-OutsideNet1-ID
+    OutsideNet1:
+        Description: The subnet ID of OutsideNet1
+        Value: !Ref OutsideNet1
+        Export:
+            Name: !Sub ${AWS::StackName}-OutsideNet1-ID
 
+    # 子网OutsideNet2， 输出名为${AWS::StackName}-OutsideNet2-ID
+    OutsideNet2:
+        Description: The subnet ID of OutsideNet2
+        Value: !Ref OutsideNet2
+        Export:
+            Name: !Sub ${AWS::StackName}-OutsideNet2-ID
     # 安全组， 输出名为${AWS::StackName}-ECSSecurityGroup-ID
     ECSSecurityGroup:
         Description: Security Allow HTTP and HTTPS

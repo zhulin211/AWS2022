@@ -16,6 +16,7 @@ Resources:
       HealthCheckPort: 80
       HealthCheckProtocol: HTTP
       Port: 80
+      Name: QytangTargetGroup
       Protocol: HTTP
       TargetType: ip
       VpcId:
@@ -27,7 +28,7 @@ Resources:
   LoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-      Name: ECSALB
+      Name: QytangECSALB
       Scheme: internet-facing
       Subnets:
         - Fn::ImportValue: !Sub ${VPCStack}-ECSNet1-ID
@@ -54,7 +55,7 @@ Resources:
   ECSCluster:
     Type: 'AWS::ECS::Cluster'
     Properties:
-      ClusterName: MyFargateCluster
+      ClusterName: QytangFargateCluster
 
   ECSRole:
     Type: 'AWS::IAM::Role'
@@ -80,7 +81,7 @@ Resources:
         -
           Name: QytangNginx
           Essential: true
-          Image: nginx
+          Image: 609047981853.dkr.ecr.us-east-1.amazonaws.com/qytang_nginx:latest
           PortMappings:
             -
               ContainerPort: 80
@@ -97,6 +98,7 @@ Resources:
     Type: AWS::ECS::Service
     DependsOn: Listener
     Properties:
+      ServiceName: QytangService
       Cluster: !Ref ECSCluster
       DeploymentController:
         Type: ECS
@@ -117,5 +119,12 @@ Resources:
                 Fn::ImportValue: !Sub ${VPCStack}-ECSNet1-ID
               -
                 Fn::ImportValue: !Sub ${VPCStack}-ECSNet2-ID
-            AssignPublicIp: ENABLED # 必须配置否则没有IP地址, Service一直卡住
+            AssignPublicIp: ENABLED # 如果没有公网IP地址,就没法下载镜像,任务会被卡住
       TaskDefinition: !Ref FargateServiceTaskDefinition
+
+Outputs: # 输出内容，并且可以被其他Stack引用
+    ServiceId:
+        Description: Fargate Service ID
+        Value: !Ref FargateService
+        Export:
+            Name: !Sub ${AWS::StackName}-ServiceID

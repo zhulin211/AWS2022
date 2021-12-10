@@ -1,11 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding=utf-8 -*-
-# 本脚由亁颐堂现任明教教主编写，用于乾颐盾Python课程！
-# 教主QQ:605658506
-# 亁颐堂官网www.qytang.com
-# 聊点高级的
-# http://www.mingjiao.org:8088
-
 import boto3
 import botocore
 from region import region
@@ -23,8 +15,11 @@ def get_stack_status(stack_name):
         elif s.get('StackName') == stack_name and s.get('StackStatus') == 'UPDATE_ROLLBACK_COMPLETE':
             return True
         elif s.get('StackName') == stack_name and s.get('StackStatus') == 'ROLLBACK_COMPLETE':
-            return True
+            delete_stack(stack_name)
+            return False
         elif s.get('StackName') == stack_name and s.get('StackStatus') == 'UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS':
+            return True
+        elif s.get('StackName') == stack_name and s.get('StackStatus') == 'DELETE_IN_PROGRESS':
             return True
     return False
 
@@ -46,21 +41,24 @@ def create_update_cf(stack_name, template_path, parameters=None):
                 print('无需更新!')
             print(e)
     else:
-        response = client.create_stack(
-            StackName=stack_name,
-            Parameters=parameters if parameters else [],
-            Capabilities=[
-                'CAPABILITY_IAM',
-            ],
-            TemplateBody=open(template_path, encoding='UTF-8').read(),
-            Tags=[
-                {
-                    'Key': 'Name',
-                    'Value': stack_name
-                },
-            ],
-        )
-        return response
+        try:
+            response = client.create_stack(
+                StackName=stack_name,
+                Parameters=parameters if parameters else [],
+                Capabilities=[
+                    'CAPABILITY_IAM',
+                ],
+                TemplateBody=open(template_path, encoding='UTF-8').read(),
+                Tags=[
+                    {
+                        'Key': 'Name',
+                        'Value': stack_name
+                    },
+                ],
+            )
+            return response
+        except Exception as e:
+            print(f'出现错误:{str(e)}')
 
 
 def delete_stack(stack_name):
@@ -68,11 +66,3 @@ def delete_stack(stack_name):
         StackName=stack_name,
     )
     return response
-
-
-if __name__ == '__main__':
-    template_path = '../ECS/ecs_1_create_vpc_nets.yaml'
-    ecs_vpc_nets_stack_name = 'ECSVPCNETS'
-    # print(get_stack_status('ECSVPCNETS'))
-    # delete_stack(ecs_vpc_nets_stack_name)
-    print(create_update_cf(ecs_vpc_nets_stack_name, template_path))

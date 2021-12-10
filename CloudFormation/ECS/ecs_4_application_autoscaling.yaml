@@ -1,0 +1,33 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create ECS
+
+Parameters:
+  ECSStack:
+    Type: String
+    Description: Name of ECS stack
+    Default: ECS
+
+Resources:
+  ScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MaxCapacity: 3
+      MinCapacity: 1
+      RoleARN:
+        Fn::Sub: 'arn:aws:iam::${AWS::AccountId}:role/aws-service-role/cassandra.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_CassandraTable'
+      ServiceNamespace: ecs
+      ScalableDimension: "ecs:service:DesiredCount"
+      ResourceId: service/QytangFargateCluster/QytangService #service/<Cluster名称>/<Service名称>
+
+  TargetTrackingScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: cpu75-target-tracking-scaling-policy
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref ScalableTarget
+      TargetTrackingScalingPolicyConfiguration:
+        TargetValue: 30.0   # 会自动基于此阈值设置CloudWatch的Alarm和Action
+        ScaleInCooldown: 10
+        ScaleOutCooldown: 10
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ECSServiceAverageCPUUtilization

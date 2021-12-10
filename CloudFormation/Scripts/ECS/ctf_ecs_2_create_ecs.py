@@ -1,4 +1,4 @@
-from ctf_ecs_1_create_vpc_nets import create_update_cf
+from Scripts.ECS.ctf_0_basic_functions import create_update_cf
 
 import boto3
 from region import region

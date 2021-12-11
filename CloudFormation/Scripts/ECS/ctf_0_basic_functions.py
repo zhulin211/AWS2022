@@ -32,6 +32,7 @@ def create_update_cf(stack_name, template_path, parameters=None):
                 Parameters=parameters if parameters else [],
                 Capabilities=[
                     'CAPABILITY_IAM',
+                    'CAPABILITY_AUTO_EXPAND'
                 ],
                 TemplateBody=open(template_path, encoding='UTF-8').read()
             )
@@ -47,6 +48,7 @@ def create_update_cf(stack_name, template_path, parameters=None):
                 Parameters=parameters if parameters else [],
                 Capabilities=[
                     'CAPABILITY_IAM',
+                    'CAPABILITY_AUTO_EXPAND'
                 ],
                 TemplateBody=open(template_path, encoding='UTF-8').read(),
                 Tags=[

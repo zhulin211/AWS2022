@@ -7,7 +7,6 @@ Parameters:
     Description: Name of VPC stack to build ECS
     Default: ECSVPCNETS
 
-
 Resources:
   TargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup

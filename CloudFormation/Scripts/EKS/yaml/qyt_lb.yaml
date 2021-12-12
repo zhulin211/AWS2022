@@ -1,0 +1,60 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: qyt-lb
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: qyt-lb
+  name: deployment-qyt-lb
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: qyt-lb
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: qyt-lb
+    spec:
+      containers:
+      - name: qyt-lb
+#        image: 609047981853.dkr.ecr.us-east-1.amazonaws.com/qyt_lb:linuxflasksocket_p80
+        image: 609047981853.dkr.ecr.us-east-1.amazonaws.com/qyt_lb:mac_x86_p80
+        imagePullPolicy: Always
+
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: qyt-lb
+  name: qyt-lb
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: qyt-lb
+---
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  namespace: qyt-lb
+  name: qyt-lb
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /*
+            backend:
+              serviceName: qyt-lb
+              servicePort: 80

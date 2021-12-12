@@ -83,8 +83,8 @@ Resources:
         Fn::GetAtt: ["EKSRole", "Arn"]
       ScalingConfig:
         MinSize: 1
-        DesiredSize: 5
-        MaxSize: 5
+        DesiredSize: 7
+        MaxSize: 7
       Labels:
         Name: QYTEKSNodeGroup
       Subnets:

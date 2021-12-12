@@ -1,6 +1,6 @@
 ### 进入本地目录
 ```shell
-cd /Users/qinke/PycharmProjects/AWS2021/CloudFormation/Scripts/ECR/dockerfile/ 
+cd /Users/qinke/PycharmProjects/AWS2021/CloudFormation/Scripts/AWS2021_15_1_ECR/dockerfile/ 
 ```
 
 ### 构建镜像(注意M1 MAC要添加--platform linux/amd64)

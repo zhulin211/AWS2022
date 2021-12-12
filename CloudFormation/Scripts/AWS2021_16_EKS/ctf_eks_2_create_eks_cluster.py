@@ -1,11 +1,11 @@
-from Scripts.ECS.ctf_0_basic_functions import create_update_cf
+from Scripts.AWS2021_15_2_ECS.ctf_0_basic_functions import create_update_cf
 
 import boto3
 from region import region
 client = boto3.client('cloudformation', region_name=region)
 
 if __name__ == "__main__":
-    template_path = '../../EKS/eks_2_create_eks_cluster.yaml'
+    template_path = '../../AWS2021_16_EKS/eks_2_create_eks_cluster.yaml'
     eks_cluster_stack_name = 'EKSCluster'
     eks_parameters = [
         {'ParameterKey': "VPCStack", "ParameterValue": 'EKSVPCNETS'},

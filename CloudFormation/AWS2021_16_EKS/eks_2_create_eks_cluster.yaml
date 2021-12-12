@@ -1,10 +1,10 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Create VPC and Nets For EKS
+Description: Create VPC and Nets For AWS2021_16_EKS
 
 Parameters:
   VPCStack:
     Type: String
-    Description: Name of VPC stack to build ECS
+    Description: Name of VPC stack to build AWS2021_15_2_ECS
     Default: EKSVPCNETS
 
 Resources:
@@ -46,7 +46,7 @@ Resources:
             Action:
               - 'sts:AssumeRole'
   EKSCluster:
-      Type: AWS::EKS::Cluster
+      Type: AWS::AWS2021_16_EKS::Cluster
       Properties:
         Name: QytangCluster
         Version: "1.21"
@@ -73,7 +73,7 @@ Resources:
             Value: EKS_Cluster
 
   EKSNodegroup:
-    Type: 'AWS::EKS::Nodegroup'
+    Type: 'AWS::AWS2021_16_EKS::Nodegroup'
     DependsOn: EKSCluster
     Properties:
       ClusterName: QytangCluster

@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Full EC2 Bastion for ECS
+Description: Full EC2 Bastion for AWS2021_15_2_ECS
 Parameters:
     KeyName: # EC2 SSH 秘钥
         Type: AWS::EC2::KeyPair::KeyName

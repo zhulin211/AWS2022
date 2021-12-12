@@ -1,6 +1,6 @@
 ### 部署资源配置文件(本地路径)
 ```shell
-kubectl apply -f /Users/qinke/PycharmProjects/AWS2021/CloudFormation/Scripts/EKS/yaml/game2048.yaml
+kubectl apply -f /Users/qinke/PycharmProjects/AWS2021/CloudFormation/Scripts/AWS2021_16_EKS/yaml/game2048.yaml
 ```
 
 ### 查看NS, 有新的NS game-2048

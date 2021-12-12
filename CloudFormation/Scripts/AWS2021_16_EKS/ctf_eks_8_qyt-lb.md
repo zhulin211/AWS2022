@@ -1,6 +1,6 @@
 ### 部署资源配置文件(本地路径)
 ```shell
-kubectl apply -f /Users/qinke/PycharmProjects/AWS2021/CloudFormation/Scripts/EKS/yaml/qyt_lb.yaml
+kubectl apply -f /Users/qinke/PycharmProjects/AWS2021/CloudFormation/Scripts/AWS2021_16_EKS/yaml/qyt_lb.yaml
 ```
 
 ### 查看POD

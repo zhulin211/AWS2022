@@ -1,6 +1,6 @@
 ### 投票网站
 ```shell
-kubectl apply -f /Users/qinke/PycharmProjects/AWS2021/CloudFormation/Scripts/EKS/yaml/azure-vote.yaml
+kubectl apply -f /Users/qinke/PycharmProjects/AWS2021/CloudFormation/Scripts/AWS2021_16_EKS/yaml/azure-vote.yaml
 ```
 
 ###查看pod

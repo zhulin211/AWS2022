@@ -1,11 +1,11 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Create ECS
+Description: Create AWS2021_15_2_ECS
 
 Parameters:
   ECSStack:
     Type: String
-    Description: Name of ECS stack
-    Default: ECS
+    Description: Name of AWS2021_15_2_ECS stack
+    Default: AWS2021_15_2_ECS
 
 Resources:
   ScalableTarget:

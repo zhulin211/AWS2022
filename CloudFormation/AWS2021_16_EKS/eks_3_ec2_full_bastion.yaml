@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Full EC2 Bastion For EKS MGMT
+Description: Full EC2 Bastion For AWS2021_16_EKS MGMT
 Parameters:
     KeyName: # EC2 SSH 秘钥
         Type: AWS::EC2::KeyPair::KeyName

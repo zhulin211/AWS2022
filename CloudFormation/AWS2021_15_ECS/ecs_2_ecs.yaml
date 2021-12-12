@@ -1,10 +1,10 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Create ECS
+Description: Create AWS2021_15_2_ECS
 
 Parameters:
   VPCStack:
     Type: String
-    Description: Name of VPC stack to build ECS
+    Description: Name of VPC stack to build AWS2021_15_2_ECS
     Default: ECSVPCNETS
 
 Resources:
@@ -52,7 +52,7 @@ Resources:
       - TargetGroup
 
   ECSCluster:
-    Type: 'AWS::ECS::Cluster'
+    Type: 'AWS::AWS2021_15_2_ECS::Cluster'
     Properties:
       ClusterName: QytangFargateCluster
 
@@ -74,7 +74,7 @@ Resources:
               - 'sts:AssumeRole'
 
   FargateServiceTaskDefinition:
-    Type: AWS::ECS::TaskDefinition
+    Type: AWS::AWS2021_15_2_ECS::TaskDefinition
     Properties:
       ContainerDefinitions:
         -
@@ -94,13 +94,13 @@ Resources:
         -  FARGATE
 
   FargateService:
-    Type: AWS::ECS::Service
+    Type: AWS::AWS2021_15_2_ECS::Service
     DependsOn: Listener
     Properties:
       ServiceName: QytangService
       Cluster: !Ref ECSCluster
       DeploymentController:
-        Type: ECS
+        Type: AWS2021_15_2_ECS
       DesiredCount: 1
       HealthCheckGracePeriodSeconds: 60
       LaunchType: FARGATE

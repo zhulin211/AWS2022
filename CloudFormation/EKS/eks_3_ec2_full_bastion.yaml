@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Full EC2 Bastion for ECS
+Description: Full EC2 Bastion For EKS MGMT
 Parameters:
     KeyName: # EC2 SSH 秘钥
         Type: AWS::EC2::KeyPair::KeyName
@@ -22,7 +22,7 @@ Parameters:
         MinLength: 1
         MaxLength: 255
         AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
-        Default: ECSVPCNETS
+        Default: EKSVPCNETS
 
 Conditions:
     CreateProdResources: # 条件一：CreateProdResources 生产环境
@@ -289,9 +289,9 @@ Resources:
         Type: "AWS::EC2::NetworkInterface"
         Properties:
             GroupSet: # 关联SecurityGroup
-                - "Fn::ImportValue": !Sub ${NetworkStackName}-ECSSecurityGroup-ID
+                - "Fn::ImportValue": !Sub ${NetworkStackName}-EKSSecurityGroup-ID
             SubnetId: # 关联子网
-                "Fn::ImportValue": !Sub ${NetworkStackName}-ECSNet1-ID
+                "Fn::ImportValue": !Sub ${NetworkStackName}-EKSNet1-ID
 
     myDynamoDBTable: # 创建DynamoDB表
         Type: "AWS::DynamoDB::Table"

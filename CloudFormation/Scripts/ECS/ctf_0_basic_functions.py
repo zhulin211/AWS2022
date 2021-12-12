@@ -1,6 +1,7 @@
 import boto3
 import botocore
 from region import region
+import time
 client = boto3.client('cloudformation', region_name=region)
 
 
@@ -16,6 +17,8 @@ def get_stack_status(stack_name):
             return True
         elif s.get('StackName') == stack_name and s.get('StackStatus') == 'ROLLBACK_COMPLETE':
             delete_stack(stack_name)
+            print('等待五秒删除处于\'ROLLBACK_COMPLETE\'状态的Stack')
+            time.sleep(5)
             return False
         elif s.get('StackName') == stack_name and s.get('StackStatus') == 'UPDATE_ROLLBACK_COMPLETE_CLEANUP_IN_PROGRESS':
             return True
@@ -32,7 +35,8 @@ def create_update_cf(stack_name, template_path, parameters=None):
                 Parameters=parameters if parameters else [],
                 Capabilities=[
                     'CAPABILITY_IAM',
-                    'CAPABILITY_AUTO_EXPAND'
+                    'CAPABILITY_AUTO_EXPAND',
+                    'CAPABILITY_NAMED_IAM'
                 ],
                 TemplateBody=open(template_path, encoding='UTF-8').read()
             )
@@ -48,7 +52,8 @@ def create_update_cf(stack_name, template_path, parameters=None):
                 Parameters=parameters if parameters else [],
                 Capabilities=[
                     'CAPABILITY_IAM',
-                    'CAPABILITY_AUTO_EXPAND'
+                    'CAPABILITY_AUTO_EXPAND',
+                    'CAPABILITY_NAMED_IAM'
                 ],
                 TemplateBody=open(template_path, encoding='UTF-8').read(),
                 Tags=[

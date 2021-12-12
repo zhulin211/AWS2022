@@ -1,0 +1,154 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create VPC and Nets For EKS
+
+Resources:
+  # Internet网关
+  InternetGW:
+      Type: "AWS::EC2::InternetGateway"
+      Properties:
+          Tags:
+              - Key: Name
+                Value: InternetGW
+  # VPC
+  QYTVPC:
+    Type: "AWS::EC2::VPC"
+    DeletionPolicy: Delete
+    Properties:
+      CidrBlock: 10.6.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: QYT_EKS_VPC
+
+  # 关联Internet GW到VPC
+  AttachGW:
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties:
+      VpcId: !Ref QYTVPC
+      InternetGatewayId: !Ref InternetGW
+
+  # 网络EKSNet1
+  EKSNet1:
+    Type: "AWS::EC2::Subnet"
+    DeletionPolicy: Delete
+    Properties:
+      AvailabilityZone: # 选择第一个（0）AZ
+        "Fn::Select":
+          - 0
+          - "Fn::GetAZs": ""
+      CidrBlock: 10.6.11.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: EKS_Net1
+        - Key: kubernetes.io/role/elb
+          Value: 1
+        - Key: kubernetes.io/cluster/QytangCluster
+          Value: shared
+      VpcId: !Ref QYTVPC
+
+  # 网络EKSNet2
+  EKSNet2:
+    Type: "AWS::EC2::Subnet"
+    DeletionPolicy: Delete
+    Properties:
+      AvailabilityZone: # 选择第一个（0）AZ
+        "Fn::Select":
+          - 2
+          - "Fn::GetAZs": ""
+      CidrBlock: 10.6.12.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: EKS_Net2
+        - Key: kubernetes.io/role/elb
+          Value: 1
+        - Key: kubernetes.io/cluster/QytangCluster
+          Value: shared
+      VpcId: !Ref QYTVPC
+
+  # 路由表  EKSRouteTable, 关联VPC
+  EKSRouteTable:
+      Type: "AWS::EC2::RouteTable"
+      Properties:
+          VpcId: !Ref QYTVPC
+          Tags:
+              - Key: Name
+                Value: EKSRouteTable
+
+  # 关联子网EKS_Net1到路由表EKSRouteTable
+  EKSNET1Association:
+      Type: "AWS::EC2::SubnetRouteTableAssociation"
+      Properties:
+          RouteTableId: !Ref EKSRouteTable
+          SubnetId: !Ref EKSNet1
+
+  # 关联子网EKS_Net2到路由表EKSRouteTable
+  EKSNET2Association:
+      Type: "AWS::EC2::SubnetRouteTableAssociation"
+      Properties:
+        RouteTableId: !Ref EKSRouteTable
+        SubnetId: !Ref EKSNet2
+
+  # 配置EKSDefaultRoute路由表的默认路由
+  EKSDefaultRoute:
+      Type: "AWS::EC2::Route"
+      Properties:
+          DestinationCidrBlock: 0.0.0.0/0
+          GatewayId: !Ref InternetGW
+          RouteTableId: !Ref EKSRouteTable
+
+  # 配置SecurityGroup
+  EKSSecurityGroup:
+      Type: "AWS::EC2::SecurityGroup"
+      Properties:
+          GroupName: eks_sg
+          GroupDescription: Allow ALL
+          VpcId: !Ref QYTVPC
+          SecurityGroupIngress:
+              - IpProtocol: -1
+                CidrIp: 0.0.0.0/0
+
+          Tags:
+            - Key: Name
+              Value: EKS_SG
+
+Outputs: # 输出内容，并且可以被其他Stack引用
+    # AvailabilityZone1
+    AZ1:
+        Description: Availability Zone of the newly created Net-1
+        Value: !GetAtt EKSNet1.AvailabilityZone
+
+    # AvailabilityZone2
+    AZ2:
+        Description: Availability Zone of the newly created Net-2
+        Value: !GetAtt EKSNet2.AvailabilityZone
+
+    # VPCID, 输出名为${AWS::StackName}-VPCID
+    VPCId:
+        Description: VPC ID
+        Value: !Ref QYTVPC
+        Export:
+            Name: !Sub ${AWS::StackName}-VPCID
+
+    # 子网EKSNet1， 输出名为${AWS::StackName}-EKSNet1-ID
+    EKSNet1:
+        Description: The subnet ID of EKSNet1
+        Value: !Ref EKSNet1
+        Export:
+            Name: !Sub ${AWS::StackName}-EKSNet1-ID
+
+    # 子网EKSNet2， 输出名为${AWS::StackName}-EKSNet2-ID
+    EKSNet2:
+        Description: The subnet ID of EKSNet2
+        Value: !Ref EKSNet2
+        Export:
+            Name: !Sub ${AWS::StackName}-EKSNet2-ID
+
+    # 安全组， 输出名为${AWS::StackName}-EKSSecurityGroup-ID
+    EKSSecurityGroup:
+        Description: Security Allow HTTP and HTTPS
+        Value: !Ref EKSSecurityGroup
+        Export:
+            Name: !Sub ${AWS::StackName}-EKSSecurityGroup-ID

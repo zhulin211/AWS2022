@@ -46,7 +46,7 @@ Resources:
             Action:
               - 'sts:AssumeRole'
   EKSCluster:
-      Type: AWS::AWS2021_16_EKS::Cluster
+      Type: AWS::EKS::Cluster
       Properties:
         Name: QytangCluster
         Version: "1.21"
@@ -73,7 +73,7 @@ Resources:
             Value: EKS_Cluster
 
   EKSNodegroup:
-    Type: 'AWS::AWS2021_16_EKS::Nodegroup'
+    Type: 'AWS::EKS::Nodegroup'
     DependsOn: EKSCluster
     Properties:
       ClusterName: QytangCluster

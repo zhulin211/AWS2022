@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Create VPC and Nets For AWS2021_15_2_ECS
+Description: Create VPC and Nets For AWS2021_15_ECS
 
 Resources:
   # Internet网关

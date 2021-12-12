@@ -1,4 +1,4 @@
-from Scripts.AWS2021_15_2_ECS.ctf_0_basic_functions import create_update_cf
+from Scripts.AWS2021_15_ECS.ECS.ctf_0_basic_functions import create_update_cf
 
 import boto3
 from region import region

@@ -68,7 +68,7 @@ def delete_stack(stack_name):
 
 
 if __name__ == '__main__':
-    template_path = '../../../AWS2021_15_ECS/no_use/ecs_1_create_vpc_nets.yaml'
+    template_path = '../../../../AWS2021_15_ECS/no_use/ecs_1_create_vpc_nets.yaml'
     ecs_vpc_nets_stack_name = 'ECSVPCNETS'
     # print(get_stack_status('ECSVPCNETS'))
     # delete_stack(ecs_vpc_nets_stack_name)

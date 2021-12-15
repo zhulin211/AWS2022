@@ -1,6 +1,6 @@
 import boto3
 import botocore
-from region import region
+from Scripts.region import region
 client = boto3.client('cloudformation', region_name=region)
 
 

@@ -1,7 +1,7 @@
 from Scripts.AWS2021_15_ECS.ECS.no_use.ctf_ecs_1_create_vpc_nets import create_update_cf
 
 import boto3
-from region import region
+from Scripts.region import region
 client = boto3.client('cloudformation', region_name=region)
 
 if __name__ == "__main__":

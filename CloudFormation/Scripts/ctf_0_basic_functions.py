@@ -63,6 +63,16 @@ def create_update_cf(stack_name, template_path, parameters=None):
                     },
                 ],
             )
+            try:
+                status_code = response.get('ResponseMetadata').get('HTTPStatusCode')
+                if status_code == 200:
+                    return "一切正常"
+                else:
+                    print("出现错误")
+                    return status_code
+            except Exception as e:
+                return f"出现错误: {str(e)}"
+
             return response
         except Exception as e:
             print(f'出现错误:{str(e)}')

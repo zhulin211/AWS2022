@@ -54,11 +54,18 @@ Resources:
             Roles:
                 - !Ref WebServiceRole
 
+    PlacementGroup:
+        Type: AWS::EC2::PlacementGroup
+        Properties:
+            Strategy: spread  # cluster | partition | spread
+
     EC2Instance:
         Type: "AWS::EC2::Instance"
 
         Properties:
-            InstanceType: t3.micro
+            InstanceType: t3.micro  # 实例类型
+            Tenancy: default  # Allowed values: dedicated | default | host
+            PlacementGroupName: !Ref PlacementGroup
             Tags: # EC2的标签
                 -   Key: Name
                     Value: EC2Full

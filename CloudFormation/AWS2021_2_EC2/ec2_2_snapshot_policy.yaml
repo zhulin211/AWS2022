@@ -1,0 +1,164 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Amazon Data Lifecycle Manager to automate the creation, retention, and deletion of snapshots taken to back up your Amazon EBS volumes
+
+Resources:
+  dlmRole:
+    Type: AWS::IAM::Role
+    Properties:
+      Path: /service-role/dlm/
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        -
+          Effect: "Allow"
+          Action:
+          - sts:AssumeRole
+          Principal:
+            Service:
+            - dlm.amazonaws.com
+      Policies:
+      - PolicyName: "dlmPolicy"
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - ec2:CreateSnapshot
+            - ec2:CreateSnapshots
+            - ec2:DeleteSnapshot
+            - ec2:DescribeVolumes
+            - ec2:DescribeInstances
+            - ec2:DescribeSnapshots
+            Resource: "*"
+          - Effect: Allow
+            Action:
+            - ec2:CreateTags
+            Resource: arn:aws:ec2:*::snapshot/*
+
+  dlmLifecyclePolicy:
+    Type: "AWS::DLM::LifecyclePolicy"
+    Properties:
+      Description: "DevOps Lifecycle Policy using CloudFormation 5 Day Retention"
+      State: "ENABLED"
+      ExecutionRoleArn: !GetAtt dlmRole.Arn
+      PolicyDetails:
+        ResourceTypes:
+          - "INSTANCE"
+        TargetTags:
+          -
+            Key: "DLM-BACKUP"
+            Value: "YES"
+
+        Schedules:
+          -
+            Name: "Daily Snapshots 5 Day Retention"
+            TagsToAdd:
+              -
+                Key: "type"
+                Value: "DailySnapshot"
+
+            CreateRule:
+              Interval: 24
+              IntervalUnit: "HOURS"
+              # UTC The time at which the policy runs are scheduled to start. The first policy run starts within an hour after the scheduled time. 
+              Times:
+                - "02:10"
+            RetainRule:
+              Count: 5
+            CopyTags: true
+
+  dlm30LifecyclePolicy:
+    Type: "AWS::DLM::LifecyclePolicy"
+    Properties:
+      Description: "DevOps Lifecycle Policy using CloudFormation 30 Day Retention"
+      State: "ENABLED"
+      ExecutionRoleArn: !GetAtt dlmRole.Arn
+      PolicyDetails:
+        ResourceTypes:
+          - "INSTANCE"
+        TargetTags:
+          -
+            Key: "DLM-30BACKUP"
+            Value: "YES"
+
+        Schedules:
+          -
+            Name: "Daily Snapshots 30 Day Retention"
+            TagsToAdd:
+              -
+                Key: "type"
+                Value: "DailySnapshot"
+
+            CreateRule:
+              Interval: 24
+              IntervalUnit: "HOURS"
+              # UTC The time at which the policy runs are scheduled to start. The first policy run starts within an hour after the scheduled time. 
+              Times:
+                - "02:10"
+            RetainRule:
+              Count: 30
+            CopyTags: true
+
+  dlm60LifecyclePolicy:
+    Type: "AWS::DLM::LifecyclePolicy"
+    Properties:
+      Description: "DevOps Lifecycle Policy using CloudFormation 60 Day Retention"
+      State: "ENABLED"
+      ExecutionRoleArn: !GetAtt dlmRole.Arn
+      PolicyDetails:
+        ResourceTypes:
+          - "INSTANCE"
+        TargetTags:
+          -
+            Key: "DLM-60BACKUP"
+            Value: "YES"
+
+        Schedules:
+          -
+            Name: "Daily Snapshots 60 Day Retention"
+            TagsToAdd:
+              -
+                Key: "type"
+                Value: "DailySnapshot"
+
+            CreateRule:
+              Interval: 24
+              IntervalUnit: "HOURS"
+              # UTC The time at which the policy runs are scheduled to start. The first policy run starts within an hour after the scheduled time. 
+              Times:
+                - "02:10"
+            RetainRule:
+              Count: 60
+            CopyTags: true
+
+  dlm90LifecyclePolicy:
+    Type: "AWS::DLM::LifecyclePolicy"
+    Properties:
+      Description: "DevOps Lifecycle Policy using CloudFormation 90 Day Retention"
+      State: "ENABLED"
+      ExecutionRoleArn: !GetAtt dlmRole.Arn
+      PolicyDetails:
+        ResourceTypes:
+          - "INSTANCE"
+        TargetTags:
+          -
+            Key: "DLM-90BACKUP"
+            Value: "YES"
+
+        Schedules:
+          -
+            Name: "Daily Snapshots 90 Day Retention"
+            TagsToAdd:
+              -
+                Key: "type"
+                Value: "DailySnapshot"
+
+            CreateRule:
+              Interval: 24
+              IntervalUnit: "HOURS"
+              # UTC The time at which the policy runs are scheduled to start. The first policy run starts within an hour after the scheduled time. 
+              Times:
+                - "02:10"
+            RetainRule:
+              Count: 90
+            CopyTags: true

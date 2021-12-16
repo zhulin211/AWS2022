@@ -40,7 +40,16 @@ def create_update_cf(stack_name, template_path, parameters=None):
                 ],
                 TemplateBody=open(template_path, encoding='UTF-8').read()
             )
-            return response
+            try:
+                status_code = response.get('ResponseMetadata').get('HTTPStatusCode')
+                if status_code == 200:
+                    return "一切正常"
+                else:
+                    print("出现错误")
+                    return status_code
+            except Exception as e:
+                return f"出现错误: {str(e)}"
+
         except botocore.exceptions.ClientError as e:
             if 'No updates are to be performed' in str(e):
                 print('无需更新!')
@@ -73,7 +82,6 @@ def create_update_cf(stack_name, template_path, parameters=None):
             except Exception as e:
                 return f"出现错误: {str(e)}"
 
-            return response
         except Exception as e:
             print(f'出现错误:{str(e)}')
 

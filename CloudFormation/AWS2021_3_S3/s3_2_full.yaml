@@ -1,0 +1,51 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS2021 S3 FULL
+
+Resources:
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: aws2021-s3-full
+      WebsiteConfiguration:  # 静态网站相关配置
+        IndexDocument: index.html
+        ErrorDocument: error.html
+      PublicAccessBlockConfiguration:  # 公共访问阻止策略
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: false #  new
+        RestrictPublicBuckets: false  # any
+      VersioningConfiguration:  # 版本控制
+        Status: Enabled  # Enabled | Suspended
+      LifecycleConfiguration:  # 生命周期管理
+        Rules:
+          - Id: LifecycleRule
+#            Prefix: glacier
+            Status: Enabled
+            ExpirationInDays: 365
+            Transitions:
+              - TransitionInDays: 60
+                StorageClass: INTELLIGENT_TIERING  # DEEP_ARCHIVE | GLACIER | GLACIER_IR | INTELLIGENT_TIERING | ONEZONE_IA | STANDARD_IA
+              - TransitionInDays: 90
+                StorageClass: GLACIER
+      Tags:
+        - Key: Department
+          Value: AWS2021
+    DeletionPolicy: Retain
+
+  BucketPolicy:  # 存储桶策略
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      PolicyDocument:
+        Id: PulicAccess
+        Version: 2012-10-17
+        Statement:
+          - Sid: PublicReadForGetBucketObjects
+            Effect: Allow
+            Principal: '*'
+            Action: 's3:GetObject'
+            Resource: !Join
+              - ''
+              - - 'arn:aws:s3:::'
+                - !Ref S3Bucket
+                - /*
+      Bucket: !Ref S3Bucket

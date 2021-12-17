@@ -1,0 +1,8 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS2021 IAM Group
+
+Resources:
+  QYTIAMGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: QytangIAMGroup

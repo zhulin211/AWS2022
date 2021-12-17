@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Full EC2
+Description: EC2 for IAM Test
 Parameters:
     KeyName: # EC2 SSH 秘钥
         Type: AWS::EC2::KeyPair::KeyName
@@ -25,50 +25,21 @@ Mappings:
             HVMG2: ami-061ac2e015473fbe2
 
 Resources:
-    WebServiceRole:
-        Type: "AWS::IAM::Role"
-        Properties:
-            RoleName: AWS2021WebServiceRole
-            AssumeRolePolicyDocument:
-                Version: "2012-10-17"
-                Statement:
-                    -   Effect: "Allow"
-                        Principal:
-                            Service:
-                                - "ec2.amazonaws.com"
-                        Action:
-                            - "sts:AssumeRole"
-            Path: "/"
-            ManagedPolicyArns:
-                - arn:aws:iam::aws:policy/AWSCodeCommitFullAccess
-                - arn:aws:iam::aws:policy/AmazonS3FullAccess
-                - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
-                - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
-                - arn:aws:iam::aws:policy/AmazonSSMFullAccess
-
-    WebService:
+    QYTInstanceProfile:
         Type: "AWS::IAM::InstanceProfile"
         Properties:
-            InstanceProfileName: AWS2021WebServiceInstanceProfileName
+            InstanceProfileName: QYTInstanceProfile
             Path: /
             Roles:
-                - !Ref WebServiceRole
-
-    PlacementGroup:
-        Type: AWS::EC2::PlacementGroup
-        Properties:
-            Strategy: spread  # cluster | partition | spread
-
+                - AWS2021IAMRole
     EC2Instance:
         Type: "AWS::EC2::Instance"
 
         Properties:
             InstanceType: t3.micro  # 实例类型
-            Tenancy: default  # Allowed values: dedicated | default | host
-            PlacementGroupName: !Ref PlacementGroup
             Tags: # EC2的标签
                 -   Key: Name
-                    Value: EC2Full
+                    Value: EC2IAMS3Test
             KeyName: # EC2使用的秘钥名
                 Ref: KeyName
             UserData: # EC2的UserData
@@ -76,13 +47,10 @@ Resources:
                     "Fn::Join":
                         - ""
                         -   - "#!/bin/bash\n"
-                            - "sudo sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/g' /etc/ssh/sshd_config\n"
-                            - "sudo sed -i 's/#PermitRootLogin yes/PermitRootLogin yes/g' /etc/ssh/sshd_config\n"
-                            - "sudo sed -i 's/UsePAM yes/UsePAM no/g' /etc/ssh/sshd_config\n"
-                            - "sh -c 'echo root:Cisc0123' | sudo chpasswd\n"
-                            - "sudo service sshd restart\n"
+                            - "yum install -y gcc python3.8 python38-devel\n"
+                            - "pip3 install boto3\n"
                             - "\n"
-            IamInstanceProfile: !Ref WebService # IAM Role
+            IamInstanceProfile: !Ref QYTInstanceProfile # IAM Role
             NetworkInterfaces:
                 - NetworkInterfaceId: !Ref NetworkInterface # 关联网络接口
                   DeviceIndex: 0

@@ -9,7 +9,11 @@ def s3_delete(s3_files, s3_bucket):
 
 def s3_empty(s3_bucket):
     s3_bucket = s3.Bucket(s3_bucket)
-    s3_bucket.objects.all().delete()
+    bucket_versioning = s3.BucketVersioning(s3_bucket)
+    if bucket_versioning.status == 'Enabled':
+        s3_bucket.object_versions.delete()
+    else:
+        s3_bucket.objects.all().delete()
 
 
 def delete_buket(buket_name):
@@ -21,5 +25,8 @@ if __name__ == '__main__':
     # s3_delete(['index.html', 'error.html'], 'aws2021-s3-basic')
     # s3_delete(['select.csv'], 'aws2021-s3-basic')
     # s3_empty('aws2021-s3-basic')
-    delete_buket('aws2021-s3-basic')
+    # delete_buket('aws2021-s3-basic')
+
+    # s3_empty('aws2021-s3-full')
+    delete_buket('aws2021-s3-full')
 

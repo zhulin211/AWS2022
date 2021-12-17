@@ -14,5 +14,5 @@ def s3_tagging(s3_files, s3_bucket, tags_list):
 
 
 if __name__ == '__main__':
-    s3_tagging(['index.html', 'error.html'], 'aws2021-s3-basic', [{'Key': 'web_file', 'Value': 'http_file'}])
-
+    # s3_tagging(['index.html', 'error.html'], 'aws2021-s3-basic', [{'Key': 'web_file', 'Value': 'http_file'}])
+    s3_tagging(['index.html', 'error.html'], 'aws2021-s3-full', [{'Key': 'web_file', 'Value': 'http_file'}])

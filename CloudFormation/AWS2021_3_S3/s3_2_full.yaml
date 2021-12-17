@@ -27,19 +27,41 @@ Resources:
                 StorageClass: INTELLIGENT_TIERING  # DEEP_ARCHIVE | GLACIER | GLACIER_IR | INTELLIGENT_TIERING | ONEZONE_IA | STANDARD_IA
               - TransitionInDays: 90
                 StorageClass: GLACIER
+      LoggingConfiguration:
+        DestinationBucketName: !Ref S3LogBucket
+        LogFilePrefix: QYTLogPrefix
       Tags:
         - Key: Department
           Value: AWS2021
+    DependsOn: S3LogBucket
     DeletionPolicy: Retain
 
-  BucketPolicy:  # 存储桶策略
+#  BucketPolicy:  # 存储桶策略
+#    Type: AWS::S3::BucketPolicy
+#    Properties:
+#      PolicyDocument:
+#        Id: PulicAccess
+#        Version: 2012-10-17
+#        Statement:
+#          - Sid: PublicReadForGetBucketObjects
+#            Effect: Allow
+#            Principal: '*'
+#            Action: 's3:GetObject'
+#            Resource: !Join
+#              - ''
+#              - - 'arn:aws:s3:::'
+#                - !Ref S3Bucket
+#                - /*
+#      Bucket: !Ref S3Bucket
+
+  WebSiteBucketPolicy:  # 存储桶策略
     Type: AWS::S3::BucketPolicy
     Properties:
       PolicyDocument:
-        Id: PulicAccess
+        Id: WebSite
         Version: 2012-10-17
         Statement:
-          - Sid: PublicReadForGetBucketObjects
+          - Sid: WebSiteAccessIndex
             Effect: Allow
             Principal: '*'
             Action: 's3:GetObject'
@@ -47,5 +69,29 @@ Resources:
               - ''
               - - 'arn:aws:s3:::'
                 - !Ref S3Bucket
-                - /*
+                - /index.html
+            Condition:
+              StringEquals:
+                "s3:ExistingObjectTag/web_file": "http_file"
+
+          - Sid: WebSiteAccessError
+            Effect: Allow
+            Principal: '*'
+            Action: 's3:GetObject'
+            Resource: !Join
+              - ''
+              - - 'arn:aws:s3:::'
+                - !Ref S3Bucket
+                - /error.html
+            Condition:
+              StringEquals:
+                "s3:ExistingObjectTag/web_file": "http_file"
       Bucket: !Ref S3Bucket
+
+  S3LogBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: aws2021-s3-log
+      AccessControl: LogDeliveryWrite
+      # 关于ACL的介绍
+      # https://docs.aws.amazon.com/AmazonS3/latest/userguide/acl-overview.html#canned-acl

@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: AWS2021 IAM Role
 
 Resources:
-    WebServiceRole:
+    AWS2021IAMRole:
         Type: "AWS::IAM::Role"
         Properties:
             RoleName: AWS2021IAMRole

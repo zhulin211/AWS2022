@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: Aurora Serverless Cloudformation Template.
 Parameters:
   DBClusterName:
-    Description: Name for DB Cluster
+    Description: Name for DB Cluster. Default - qytdbcluster
     Type: String
     MinLength: '1'
     MaxLength: '64'
@@ -10,16 +10,25 @@ Parameters:
     ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
     Default: qytdbcluster
   DBUsername:
-    Description: Username for MySQL database access. Default - username
+    Description: Username for database access. Default - qytdbuser
     Type: String
     MinLength: '1'
     MaxLength: '16'
     AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
     ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
     Default: qytdbuser
+  DBName:
+    NoEcho: 'true'
+    Description: Name of DataBase. Default - qytangdb
+    Type: String
+    MinLength: '4'
+    MaxLength: '41'
+    AllowedPattern: '[a-zA-Z0-9]*'
+    ConstraintDescription: must contain only alphanumeric characters.
+    Default: qytangdb
   DBPassword:
     NoEcho: 'true'
-    Description: Password MySQL database access. Default - password
+    Description: Password database access. Default - Cisc0123
     Type: String
     MinLength: '6'
     MaxLength: '41'
@@ -33,7 +42,13 @@ Parameters:
     MaxLength: 255
     AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
     Default: VPC2Subnets
-
+  SecurityGroupStackName: # 引用Security Group Stack
+    Type: String
+    Description: 引用Security Group Stack
+    MinLength: 1
+    MaxLength: 255
+    AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
+    Default: VPC5SecurityGroup
 Resources:
   DBSubnetGroup:
     Type: 'AWS::RDS::DBSubnetGroup'
@@ -46,7 +61,7 @@ Resources:
   RDSCluster:
     Properties:
       DBClusterIdentifier: !Ref DBClusterName
-      DatabaseName: qytangdb
+      DatabaseName: !Ref DBName
       Engine: aurora-postgresql
       EngineMode: serverless
       EngineVersion: '10'
@@ -59,4 +74,7 @@ Resources:
       MasterUserPassword: !Ref DBPassword
       MasterUsername: !Ref DBUsername
       DBSubnetGroupName: !Ref DBSubnetGroup
+      VpcSecurityGroupIds:
+        - Fn::ImportValue: !Sub ${SecurityGroupStackName}-RDSSecurityGroup-ID
+
     Type: "AWS::RDS::DBCluster"

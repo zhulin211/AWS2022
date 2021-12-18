@@ -1,0 +1,13 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS2022 IAM User
+
+Resources:
+  User1:
+    Type: AWS::IAM::User
+    Properties:
+      Groups:
+        - QytangIAMGroup
+      UserName: QYTIAMUser1
+      LoginProfile:
+        Password: Cisc0123
+        PasswordResetRequired: No

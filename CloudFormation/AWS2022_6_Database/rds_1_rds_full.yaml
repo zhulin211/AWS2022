@@ -1,0 +1,62 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Aurora Serverless Cloudformation Template.
+Parameters:
+  DBClusterName:
+    Description: Name for DB Cluster
+    Type: String
+    MinLength: '1'
+    MaxLength: '64'
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
+    Default: qytdbcluster
+  DBUsername:
+    Description: Username for MySQL database access. Default - username
+    Type: String
+    MinLength: '1'
+    MaxLength: '16'
+    AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ConstraintDescription: must begin with a letter and contain only alphanumeric characters.
+    Default: qytdbuser
+  DBPassword:
+    NoEcho: 'true'
+    Description: Password MySQL database access. Default - password
+    Type: String
+    MinLength: '6'
+    MaxLength: '41'
+    AllowedPattern: '[a-zA-Z0-9]*'
+    ConstraintDescription: must contain only alphanumeric characters.
+    Default: Cisc0123
+  SubnetStackName: # 引用Subnet Stack
+    Type: String
+    Description: 引用Subnet Stack
+    MinLength: 1
+    MaxLength: 255
+    AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
+    Default: VPC2Subnets
+
+Resources:
+  DBSubnetGroup:
+    Type: 'AWS::RDS::DBSubnetGroup'
+    Properties:
+      DBSubnetGroupDescription: qytangdbsubnetgroup
+      SubnetIds:
+        - Fn::ImportValue: !Sub ${SubnetStackName}-PrivateNet1-ID
+        - Fn::ImportValue: !Sub ${SubnetStackName}-PrivateNet2-ID
+
+  RDSCluster:
+    Properties:
+      DBClusterIdentifier: !Ref DBClusterName
+      DatabaseName: qytangdb
+      Engine: aurora-postgresql
+      EngineMode: serverless
+      EngineVersion: '10'
+      ScalingConfiguration:
+              AutoPause: true
+              MinCapacity: 2
+              MaxCapacity: 2
+              SecondsUntilAutoPause: 900
+      EnableHttpEndpoint: true
+      MasterUserPassword: !Ref DBPassword
+      MasterUsername: !Ref DBUsername
+      DBSubnetGroupName: !Ref DBSubnetGroup
+    Type: "AWS::RDS::DBCluster"

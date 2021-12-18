@@ -1,0 +1,129 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create ECS
+
+Parameters:
+  VPCStack:
+    Type: String
+    Description: Name of VPC stack to build ECS
+    Default: ECSVPCNETS
+
+Resources:
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckEnabled: true
+      HealthCheckPort: 80
+      HealthCheckProtocol: HTTP
+      Port: 80
+      Name: QytangTargetGroup
+      Protocol: HTTP
+      TargetType: ip
+      VpcId:
+        Fn::ImportValue: !Sub ${VPCStack}-VPCID
+      Tags:
+        - Key: Name
+          Value: ECS_TG
+
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: QytangECSALB
+      Scheme: internet-facing
+      Subnets:
+        - Fn::ImportValue: !Sub ${VPCStack}-ECSNet1-ID
+        - Fn::ImportValue: !Sub ${VPCStack}-ECSNet2-ID
+      SecurityGroups:
+        - Fn::ImportValue: !Sub ${VPCStack}-ECSSecurityGroup-ID
+      Tags:
+        - Key: Name
+          Value: ECS_ALB
+
+  Listener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Order: 1
+          TargetGroupArn: !Ref TargetGroup
+          Type: forward
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 80
+      Protocol: HTTP
+    DependsOn:
+      - TargetGroup
+
+  ECSCluster:
+    Type: 'AWS::ECS::Cluster'
+    Properties:
+      ClusterName: QytangFargateCluster
+
+  ECSRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Sid: ""
+            Principal:
+              Service:
+                - ecs-tasks.amazonaws.com
+                - ecs.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+
+  FargateServiceTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        -
+          Name: QytangNginx
+          Essential: true
+          Image: 609047981853.dkr.ecr.us-east-1.amazonaws.com/qytang_nginx:latest
+          PortMappings:
+            -
+              ContainerPort: 80
+              HostPort: 80
+              Protocol: tcp
+      Cpu: '256'
+      ExecutionRoleArn: !Ref ECSRole
+      Memory: '512'
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        -  FARGATE
+
+  FargateService:
+    Type: AWS::ECS::Service
+    DependsOn: Listener
+    Properties:
+      ServiceName: QytangService
+      Cluster: !Ref ECSCluster
+      DeploymentController:
+        Type: ECS
+      DesiredCount: 1
+      HealthCheckGracePeriodSeconds: 60
+      LaunchType: FARGATE
+      LoadBalancers:
+        - ContainerName: QytangNginx
+          ContainerPort: 80
+          TargetGroupArn: !Ref TargetGroup
+      NetworkConfiguration:
+          AwsvpcConfiguration:
+            SecurityGroups:
+              -
+                Fn::ImportValue: !Sub ${VPCStack}-ECSSecurityGroup-ID
+            Subnets:
+              -
+                Fn::ImportValue: !Sub ${VPCStack}-ECSNet1-ID
+              -
+                Fn::ImportValue: !Sub ${VPCStack}-ECSNet2-ID
+            AssignPublicIp: ENABLED # 如果没有公网IP地址,就没法下载镜像,任务会被卡住
+      TaskDefinition: !Ref FargateServiceTaskDefinition
+
+Outputs: # 输出内容，并且可以被其他Stack引用
+    ServiceId:
+        Description: Fargate Service ID
+        Value: !Ref FargateService
+        Export:
+            Name: !Sub ${AWS::StackName}-ServiceID

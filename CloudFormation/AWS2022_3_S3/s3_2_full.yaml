@@ -1,11 +1,11 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: AWS2021 S3 FULL
+Description: AWS2022 S3 FULL
 
 Resources:
   S3Bucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: aws2021-s3-full
+      BucketName: aws2022-s3-full
       WebsiteConfiguration:  # 静态网站相关配置
         IndexDocument: index.html
         ErrorDocument: error.html
@@ -32,7 +32,7 @@ Resources:
         LogFilePrefix: QYTLogPrefix
       Tags:
         - Key: Department
-          Value: AWS2021
+          Value: AWS2022
     DependsOn: S3LogBucket
     DeletionPolicy: Retain
 
@@ -91,7 +91,7 @@ Resources:
   S3LogBucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: aws2021-s3-log
+      BucketName: aws2022-s3-log
       AccessControl: LogDeliveryWrite
       # 关于ACL的介绍
       # https://docs.aws.amazon.com/AmazonS3/latest/userguide/acl-overview.html#canned-acl

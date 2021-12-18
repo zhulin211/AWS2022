@@ -28,7 +28,7 @@ Resources:
     WebServiceRole:
         Type: "AWS::IAM::Role"
         Properties:
-            RoleName: AWS2021WebServiceRole
+            RoleName: AWS2022WebServiceRole
             AssumeRolePolicyDocument:
                 Version: "2012-10-17"
                 Statement:
@@ -49,7 +49,7 @@ Resources:
     WebService:
         Type: "AWS::IAM::InstanceProfile"
         Properties:
-            InstanceProfileName: AWS2021WebServiceInstanceProfileName
+            InstanceProfileName: AWS2022WebServiceInstanceProfileName
             Path: /
             Roles:
                 - !Ref WebServiceRole

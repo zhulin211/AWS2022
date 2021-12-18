@@ -1,11 +1,11 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: AWS2021 S3 Basic
+Description: AWS2022 S3 Basic
 
 Resources:
   S3Bucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: aws2021-s3-basic
+      BucketName: aws2022-s3-basic
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         IgnorePublicAcls: true
@@ -13,5 +13,5 @@ Resources:
         RestrictPublicBuckets: true
       Tags:
         - Key: Department
-          Value: AWS2021
+          Value: AWS2022
     DeletionPolicy: Retain

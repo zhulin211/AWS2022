@@ -47,7 +47,6 @@ Resources:
                     "Fn::Join":
                         - ""
                         -   - "#!/bin/bash\n"
-                            - "yum install -y gcc python3.8 python38-devel\n"
                             - "pip3 install boto3\n"
                             - "\n"
             IamInstanceProfile: !Ref QYTInstanceProfile # IAM Role

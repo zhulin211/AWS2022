@@ -1,0 +1,84 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Create EFS system and Mount Targets for test VPC"
+
+Parameters:
+    SubnetStackName: # 引用Subnet Stack
+        Type: String
+        Description: 引用Subnet Stack
+        MinLength: 1
+        MaxLength: 255
+        AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
+        Default: VPC2Subnets
+
+    SecurityGroupStackName: # 引用之前的Security Group Stack
+        Type: String
+        Description: Name of Security Group Stack.
+        MinLength: 1
+        MaxLength: 255
+        AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
+        Default: VPC5SecurityGroup
+
+Resources:
+    EFSFileSystem:
+        Type: AWS::EFS::FileSystem
+        Properties:
+            BackupPolicy:
+              Status: ENABLED  # Allowed values: DISABLED | DISABLING | ENABLED | ENABLING
+            Encrypted: true
+            LifecyclePolicies:
+              - TransitionToIA: AFTER_60_DAYS  # Allowed values: AFTER_14_DAYS | AFTER_30_DAYS | AFTER_60_DAYS | AFTER_7_DAYS | AFTER_90_DAYS
+            PerformanceMode: generalPurpose
+            ThroughputMode: bursting
+            FileSystemPolicy:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: "Allow"
+                  Action:  # https://docs.aws.amazon.com/efs/latest/ug/iam-access-control-nfs-efs.html
+                    - "elasticfilesystem:ClientMount"
+                    - "elasticfilesystem:ClientWrite"
+                    - "elasticfilesystem:ClientRootAccess"
+                  Principal:
+                    AWS: '*'
+#                    AWS: 'arn:aws:iam::111122223333:role/EfsReadOnly'
+            FileSystemTags:
+              - Key: Environment
+                Value: test
+              - Key: Name
+                Value: qytang-efs
+              - Key: createdBy
+                Value: qytang aws 2022
+
+    MountTarget1:
+        Type: AWS::EFS::MountTarget
+        DependsOn: EFSFileSystem
+        Properties:
+            FileSystemId: !Ref EFSFileSystem
+            SecurityGroups:
+              - "Fn::ImportValue": !Sub ${SecurityGroupStackName}-EFSSecurityGroup-ID
+            SubnetId:
+              "Fn::ImportValue": !Sub ${SubnetStackName}-PrivateNet1-ID
+
+    MountTarget2:
+        Type: AWS::EFS::MountTarget
+        DependsOn: EFSFileSystem
+        Properties:
+            FileSystemId: !Ref EFSFileSystem
+            SecurityGroups:
+              - "Fn::ImportValue": !Sub ${SecurityGroupStackName}-EFSSecurityGroup-ID
+            SubnetId:
+              "Fn::ImportValue": !Sub ${SubnetStackName}-PrivateNet2-ID
+
+Outputs:
+  EFS:
+    Description: The created EFS
+    Value: !Ref EFSFileSystem
+    Export:
+      Name: !Sub ${AWS::StackName}-FSID
+
+  EFSMountTarget1:
+    Description: The EFS MountTarget1
+    Value: !Ref MountTarget1
+
+  EFSMountTarget2:
+    Description: The EFS MountTarget2
+    Value: !Ref MountTarget2

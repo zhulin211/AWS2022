@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Description: Test RDS EC2
+Description: Test EFS and Redis EC2
 Parameters:
   KeyName: # EC2 SSH 秘钥
     Type: AWS::EC2::KeyPair::KeyName
@@ -31,6 +31,14 @@ Parameters:
     AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
     Default: VPC5SecurityGroup
 
+  EFSStackName: # 引用之前的EFS Stack
+    Type: String
+    Description: Name of EFS Stack.
+    MinLength: 1
+    MaxLength: 255
+    AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
+    Default: EFS
+
 Mappings:
   AWSRegionArch2AMI: # 镜像映射
     ap-northeast-2:
@@ -46,7 +54,7 @@ Resources:
     Properties:
       Tags:
         - Key: Name
-          Value: EC2_EIP
+          Value: EC2_EIP_2
 
   NetworkInterfaceEC2: # EC2网络接口
     Type: "AWS::EC2::NetworkInterface"
@@ -54,10 +62,10 @@ Resources:
       GroupSet:
         - "Fn::ImportValue": !Sub ${SecurityGroupStackName}-EC2SecurityGroup-ID
       SubnetId:
-        "Fn::ImportValue": !Sub ${SubnetStackName}-OutsideNet1-ID
+        "Fn::ImportValue": !Sub ${SubnetStackName}-OutsideNet2-ID
       Tags:
         - Key: Name
-          Value: EC2_ENI
+          Value: EC2_ENI_2
 
   EIPAssociation: # 网络接口关联EIP
     Type: "AWS::EC2::EIPAssociation"
@@ -68,7 +76,7 @@ Resources:
   WebServiceRole:
     Type: "AWS::IAM::Role"
     Properties:
-      RoleName: AWS2022WebServiceRole
+      RoleName: AWS2022WebServiceRole2
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -89,7 +97,7 @@ Resources:
   WebService:
     Type: "AWS::IAM::InstanceProfile"
     Properties:
-      InstanceProfileName: AWS2022WebServiceInstanceProfileName
+      InstanceProfileName: AWS2022WebServiceInstanceProfileName2
       Path: /
       Roles:
         - !Ref WebServiceRole
@@ -101,7 +109,7 @@ Resources:
       InstanceType: t3.micro  # 实例类型
       Tags: # EC2的标签
         -   Key: Name
-            Value: EC2_For_RDS_Test
+            Value: EC2_For_EFS_Redis_Test_2
       KeyName: # EC2使用的秘钥名
         Ref: KeyName
       UserData: # EC2的UserData
@@ -109,9 +117,16 @@ Resources:
           "Fn::Join":
             - ""
             -   - "#!/bin/bash\n"
-                - "sudo yum install -y postgresql\n"
-                - "sudo pip3 install psycopg2-binary\n"
+                - "sudo yum install -y amazon-efs-utils\n"
                 - "sudo pip3 install boto3\n"
+                - "sudo mkdir /efs_django\n"
+                - "sudo yum install -y gcc\n"
+                - "sudo wget http://download.redis.io/redis-stable.tar.gz && tar xvzf redis-stable.tar.gz && cd redis-stable && make\n"
+                - "sudo sudo cp src/redis-cli /usr/bin/\n"
+                - "sudo echo '"
+                - "Fn::ImportValue": !Sub ${EFSStackName}-FSID
+                - ":/ /efs_django efs defaults,_netdev 0 0' "
+                - ">> /etc/fstab\n"
                 - "\n"
       IamInstanceProfile: !Ref WebService # IAM Role
       NetworkInterfaces:

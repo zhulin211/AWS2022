@@ -1,0 +1,61 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Create EFS system and Mount Targets for test VPC"
+
+Parameters:
+    SubnetStackName: # 引用Subnet Stack
+        Type: String
+        Description: 引用Subnet Stack
+        MinLength: 1
+        MaxLength: 255
+        AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
+        Default: VPC2Subnets
+
+    SecurityGroupStackName: # 引用之前的Security Group Stack
+        Type: String
+        Description: Name of Security Group Stack.
+        MinLength: 1
+        MaxLength: 255
+        AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
+        Default: VPC5SecurityGroup
+
+Resources:
+  RedisSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      CacheSubnetGroupName: qytang-redis-subnetgroup
+      Description: qytang redis test
+      SubnetIds:
+        - "Fn::ImportValue": !Sub ${SubnetStackName}-PrivateNet1-ID
+        - "Fn::ImportValue": !Sub ${SubnetStackName}-PrivateNet2-ID
+
+  ParameterGroup:
+    Type: 'AWS::ElastiCache::ParameterGroup'
+    Properties:
+      Description: QYTParameterGroup
+      CacheParameterGroupFamily: redis5.0
+      Properties:
+        maxmemory-policy: 'allkeys-lru'
+
+  RedisCluster:
+    Type: AWS::ElastiCache::ReplicationGroup
+    Properties:
+      AutoMinorVersionUpgrade: true
+      MultiAZEnabled: true
+      CacheParameterGroupName: !Ref ParameterGroup
+      CacheNodeType: cache.t2.micro
+      CacheSubnetGroupName: !Ref RedisSubnetGroup
+      Engine: redis
+      EngineVersion: 5.0.6
+      NumNodeGroups: 1
+      Port: 6379
+      ReplicasPerNodeGroup: 1
+      ReplicationGroupDescription: Sample Redis group for scaling
+      PreferredCacheClusterAZs:
+        - "Fn::Select":
+          - 0
+          - "Fn::GetAZs": ""
+        - "Fn::Select":
+          - 2
+          - "Fn::GetAZs": ""
+      SecurityGroupIds:
+        - "Fn::ImportValue": !Sub ${SecurityGroupStackName}-RedisSecurityGroup-ID

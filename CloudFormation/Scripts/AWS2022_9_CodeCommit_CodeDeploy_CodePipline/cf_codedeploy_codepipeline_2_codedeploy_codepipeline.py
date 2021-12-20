@@ -5,8 +5,8 @@ from CloudFormation.region import region
 client = boto3.client('cloudformation', region_name=region)
 
 if __name__ == "__main__":
-    template_path = '../../AWS2022_9_CodeCommit_CodeDeploy_CodePipeline/codecommit_2_iam_user_group.yaml'
-    stack_name = 'CodeCommitIAMUserPolicyGroup'
+    template_path = '../../AWS2022_9_CodeCommit_CodeDeploy_CodePipeline/codedeploy_codepipeline_2_codedeploy_codepipeline.yaml'
+    stack_name = 'CodeDeployCodePipeline'
     parameters = [
         {'ParameterKey': "CodeCommitStack", "ParameterValue": 'CodeCommitAWS2022Flask'},
     ]

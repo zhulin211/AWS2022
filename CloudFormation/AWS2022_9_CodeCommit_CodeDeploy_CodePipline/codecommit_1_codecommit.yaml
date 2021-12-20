@@ -1,0 +1,25 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Create CodeCommit Repository"
+
+Resources:
+  QYTRepo:
+    Type: AWS::CodeCommit::Repository
+    Properties:
+      RepositoryName: AWS2022_Flask
+      RepositoryDescription: a description
+
+
+Outputs:
+  QYTRepoCloneUrlHTTP:
+    Description: AWS2022_Flask clone http url
+    Value:
+      Fn::GetAtt: [QYTRepo, CloneUrlHttp]
+    Export:
+      Name: !Sub ${AWS::StackName}-AWS2022Flask-CloneUrlHTTP
+
+  QYTRepoArn:
+    Description: AWS2022_Flask Arn
+    Value:
+      Fn::GetAtt: [QYTRepo, Arn]
+    Export:
+      Name: !Sub ${AWS::StackName}-AWS2022Flask-Arn

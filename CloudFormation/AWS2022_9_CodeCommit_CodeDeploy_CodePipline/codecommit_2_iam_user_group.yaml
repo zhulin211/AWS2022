@@ -1,0 +1,56 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS2022 CodeCommit User Policy and Group
+
+Parameters:
+  CodeCommitStack:
+    Type: String
+    Description: Name of CodeCommit Stack.
+    MinLength: 1
+    MaxLength: 255
+    AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
+    Default: CodeCommitAWS2022Flask
+
+Resources:
+  QYTCodeCommitPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: QytangCodeCommitPolicy
+      PolicyDocument:
+        Id: CodeCommitPolicyDoc
+        Version: 2012-10-17
+        Statement:
+          - Sid: AllowAccessAWS2022Flask
+            Effect: Allow
+            Action:
+              - codecommit:*
+            Resource:
+              - "Fn::ImportValue": !Sub ${CodeCommitStack}-AWS2022Flask-Arn
+          - Sid: CreateGitCred
+            Effect: Allow
+            Action:
+              - iam:ListServiceSpecificCredentials
+              - iam:CreateServiceSpecificCredential
+              - iam:DeleteServiceSpecificCredential
+              - iam:UpdateServiceSpecificCredential
+              - iam:ResetServiceSpecificCredential
+            Resource:
+              Fn::Sub: 'arn:aws:iam::${AWS::AccountId}:user/QYTCodecommitUser1'
+
+
+  QytangCodeCommitGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: QytangCodeCommitGroup
+      ManagedPolicyArns:
+        - !Ref QYTCodeCommitPolicy
+
+
+  User1:
+    Type: AWS::IAM::User
+    Properties:
+      Groups:
+        - QytangCodeCommitGroup
+      UserName: QYTCodecommitUser1
+      LoginProfile:
+        Password: Cisc0123
+        PasswordResetRequired: No

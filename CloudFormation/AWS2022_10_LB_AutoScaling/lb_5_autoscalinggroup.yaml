@@ -1,0 +1,75 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  LaunchTemplateStackName: # 引用之前的Launch Template Stack
+    Type: String
+    Description: Name of Launch Template Stack.
+    MinLength: 1
+    MaxLength: 255
+    AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
+    Default: LaunchTemplate
+
+  SubnetStackName: # 引用Subnet Stack
+    Type: String
+    Description: 引用Subnet Stack
+    MinLength: 1
+    MaxLength: 255
+    AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
+    Default: VPC2Subnets
+
+  LBStack:
+    Type: String
+    Description: Name of LB Stack.
+    MinLength: 1
+    MaxLength: 255
+    AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
+    Default: LB
+
+Resources:
+  QYTASG:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: QYTASG
+      MinSize: "1"
+      MaxSize: "6"
+      DesiredCapacity: "2"
+      HealthCheckGracePeriod: 300
+      HealthCheckType: ELB  # 健康检测方式 EC2(默认)或者ELB
+      TargetGroupARNs:  # LB的Target Group
+        - Fn::ImportValue: !Sub ${LBStack}-TargetGroupArn
+      LaunchTemplate:
+        LaunchTemplateId:  # 使用的Launch Template
+          Fn::ImportValue: !Sub ${LaunchTemplateStackName}-LaunchTemplate
+        Version:  # 使用的Launch Template的版本, 使用最新的版本
+          Fn::ImportValue: !Sub ${LaunchTemplateStackName}-LaunchTemplateLatestVersionNumber
+      VPCZoneIdentifier:  # 动态把实例分配到InsideNet1或者InsideNet2
+        - Fn::ImportValue: !Sub ${SubnetStackName}-InsideNet1-ID
+        - Fn::ImportValue: !Sub ${SubnetStackName}-InsideNet2-ID
+      MetricsCollection:
+        - Granularity: "1Minute"
+          Metrics:
+            - "GroupMinSize"
+            - "GroupMaxSize"
+      Tags:
+        - Key: Environment
+          Value: Production
+          PropagateAtLaunch: "true"
+        - Key: Purpose
+          Value: WebServerGroup
+          PropagateAtLaunch: "false"
+
+  PredictiveScalingPolicy:
+    Type: 'AWS::AutoScaling::ScalingPolicy'
+    Properties:
+      AutoScalingGroupName: !Ref QYTASG
+      PolicyType: TargetTrackingScaling  # TargetTrackingScaling | StepScaling | SimpleScaling (default) | PredictiveScaling
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ASGAverageCPUUtilization
+        TargetValue: 80.0
+
+Outputs:
+    ASG:
+        Description: Auto Scaling Group
+        Value: !Ref QYTASG
+        Export:
+          Name: !Sub ${AWS::StackName}-ASG

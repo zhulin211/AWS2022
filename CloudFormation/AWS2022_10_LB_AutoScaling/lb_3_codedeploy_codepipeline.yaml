@@ -10,6 +10,14 @@ Parameters:
     AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
     Default: CodeCommitAWS2022Flask
 
+  LBStack:
+    Type: String
+    Description: Name of LB Stack.
+    MinLength: 1
+    MaxLength: 255
+    AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
+    Default: LB
+
 Resources:
   CodeDeployApplication:
     Type: AWS::CodeDeploy::Application
@@ -223,15 +231,20 @@ Resources:
       DeploymentGroupName: QYTAWSFlaskDeployGroup
       ApplicationName: !Ref CodeDeployApplication
       DeploymentStyle:
-        DeploymentOption: WITHOUT_TRAFFIC_CONTROL  # WITH_TRAFFIC_CONTROL | WITHOUT_TRAFFIC_CONTROL (不激活load balance)
+        DeploymentOption: WITH_TRAFFIC_CONTROL  # WITH_TRAFFIC_CONTROL | WITHOUT_TRAFFIC_CONTROL (激活load balance)
         DeploymentType: IN_PLACE  # 对存在的instances进行! 停止,升级和重启! # 可选项 BLUE_GREEN | IN_PLACE
+      LoadBalancerInfo:
+        TargetGroupInfoList:
+          - Name:
+              Fn::ImportValue: !Sub ${LBStack}-TargetGroup
+
       DeploymentConfigName: CodeDeployDefault.AllAtOnce  # CodeDeployDefault.OneAtATime | CodeDeployDefault.HalfAtATime
       ServiceRoleArn:
         Fn::GetAtt: ["CodeDeployRole", "Arn"]
 
       Ec2TagFilters:  # 通过这个过滤器找到EC2实例
-        - Key: Name
-          Value: Web Service
+        - Key: AWS2022
+          Value: EC2_For_LoadBalance
           Type: "KEY_AND_VALUE"
 
   AmazonCloudWatchEventRule:  # CloudWatch监测CodeCommit仓库, 触发CodePipeline

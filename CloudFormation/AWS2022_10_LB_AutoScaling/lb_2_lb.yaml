@@ -1,0 +1,101 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Qytang AWS2022 Load Balance
+
+Parameters:
+  VPCStackName: # 引用之前的VPC Stack
+    Type: String
+    Description: Name of VPC Stack.
+    MinLength: 1
+    MaxLength: 255
+    AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
+    Default: VPC1VPC
+
+  SubnetStackName: # 引用Subnet Stack
+    Type: String
+    Description: 引用Subnet Stack
+    MinLength: 1
+    MaxLength: 255
+    AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
+    Default: VPC2Subnets
+
+  SecurityGroupStackName: # 引用之前的Security Group Stack
+    Type: String
+    Description: Name of Security Group Stack.
+    MinLength: 1
+    MaxLength: 255
+    AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
+    Default: VPC5SecurityGroup
+
+  LBEC2StackName: # 引用之前的LB EC2 Stack
+    Type: String
+    Description: Name of LB EC2 Stack.
+    MinLength: 1
+    MaxLength: 255
+    AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
+    Default: LBEC2s
+
+Resources:
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckEnabled: true
+      HealthCheckPort: 80
+      HealthCheckProtocol: HTTP
+      Port: 80
+      Name: QytangTargetGroup
+      Protocol: HTTP
+      TargetType: instance  # alb | instance | ip | lambda
+# 手工放入Instance, 后续我们使用CodePipline放入
+#      Targets:
+#        - Id:
+#            Fn::ImportValue: !Sub ${LBEC2StackName}-InstanceId1
+#          Port: 80
+#        - Id:
+#            Fn::ImportValue: !Sub ${LBEC2StackName}-InstanceId2
+#          Port: 80
+      VpcId:
+        Fn::ImportValue: !Sub ${VPCStackName}-VPCID
+      Tags:
+        - Key: Name
+          Value: QytangTargetGroup
+
+  LoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: QytangALB
+      Scheme: internet-facing
+      Subnets:
+        - Fn::ImportValue: !Sub ${SubnetStackName}-OutsideNet1-ID
+        - Fn::ImportValue: !Sub ${SubnetStackName}-OutsideNet2-ID
+      SecurityGroups:
+        - Fn::ImportValue: !Sub ${SecurityGroupStackName}-LBSecurityGroup-ID
+      Tags:
+        - Key: Name
+          Value: QytangALB
+
+  Listener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Order: 1
+          TargetGroupArn: !Ref TargetGroup
+          Type: forward
+      LoadBalancerArn: !Ref LoadBalancer
+      Port: 80
+      Protocol: HTTP
+    DependsOn:
+      - TargetGroup
+
+Outputs:
+    TargetGroup:
+        Description: LB Target Group
+        Value:
+          Fn::GetAtt: ["TargetGroup", "TargetGroupName"]
+        Export:
+          Name: !Sub ${AWS::StackName}-TargetGroup
+
+    TargetGroupArn:
+      Description: LB Target Group Arn
+      Value: !Ref TargetGroup
+      Export:
+        Name: !Sub ${AWS::StackName}-TargetGroupArn

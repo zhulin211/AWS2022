@@ -16,9 +16,9 @@ Resources:
     Properties:
       HostedZoneId: Z1JOS2YODO11W5
       Comment: API Server Domian Name
-      Name: weighted.mingjiao.org.
+      Name: failover.mingjiao.org.
       HealthCheckId: !Ref myHealthCheck
-      Weight: 25
+      Failover: SECONDARY
       Type: A
       TTL: 30
       SetIdentifier: 1
@@ -34,7 +34,7 @@ Resources:
         Port: 80
         Type: HTTP
         ResourcePath: '/'
-        FullyQualifiedDomainName: 'weighted.mingjiao.org'
+        FullyQualifiedDomainName: 'failover.mingjiao.org'
         RequestInterval: 30
         FailureThreshold: 3
       HealthCheckTags:

@@ -8,7 +8,7 @@ Parameters:
     MinLength: 1
     MaxLength: 255
     AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
-    Default: Route53EC2USW
+    Default: Route53EC2USE
 
 Resources:
   myDNSRecord:
@@ -17,9 +17,28 @@ Resources:
       HostedZoneId: Z1JOS2YODO11W5
       Comment: API Server Domian Name
       Name: weighted.mingjiao.org.
+      HealthCheckId: !Ref myHealthCheck
       Weight: 75
       Type: A
       TTL: 30
       SetIdentifier: 2
       ResourceRecords:
         - Fn::ImportValue: !Sub ${EC2StackName}-EC2-IP
+
+  myHealthCheck:
+    Type: 'AWS::Route53::HealthCheck'
+    Properties:
+      HealthCheckConfig:
+        IPAddress:
+          Fn::ImportValue: !Sub ${EC2StackName}-EC2-IP
+        Port: 80
+        Type: HTTP
+        ResourcePath: '/staff_info'
+        FullyQualifiedDomainName: 'weighted.mingjiao.org'
+        RequestInterval: 30
+        FailureThreshold: 3
+      HealthCheckTags:
+        - Key: Department
+          Value: AWS2022
+        - Key: Location
+          Value: US EAST 1

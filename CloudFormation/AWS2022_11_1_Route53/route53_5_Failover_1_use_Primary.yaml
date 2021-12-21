@@ -8,7 +8,7 @@ Parameters:
     MinLength: 1
     MaxLength: 255
     AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
-    Default: Route53EC2USW
+    Default: Route53EC2USE
 
 Resources:
   myDNSRecord:
@@ -16,12 +16,12 @@ Resources:
     Properties:
       HostedZoneId: Z1JOS2YODO11W5
       Comment: API Server Domian Name
-      Name: weighted.mingjiao.org.
+      Name: failover.mingjiao.org.
       HealthCheckId: !Ref myHealthCheck
-      Weight: 25
+      Failover: PRIMARY
       Type: A
       TTL: 30
-      SetIdentifier: 1
+      SetIdentifier: 2
       ResourceRecords:
         - Fn::ImportValue: !Sub ${EC2StackName}-EC2-IP
 
@@ -33,12 +33,12 @@ Resources:
           Fn::ImportValue: !Sub ${EC2StackName}-EC2-IP
         Port: 80
         Type: HTTP
-        ResourcePath: '/'
-        FullyQualifiedDomainName: 'weighted.mingjiao.org'
+        ResourcePath: '/staff_info'
+        FullyQualifiedDomainName: 'failover.mingjiao.org'
         RequestInterval: 30
         FailureThreshold: 3
       HealthCheckTags:
         - Key: Department
           Value: AWS2022
         - Key: Location
-          Value: US West 1
+          Value: US EAST 1

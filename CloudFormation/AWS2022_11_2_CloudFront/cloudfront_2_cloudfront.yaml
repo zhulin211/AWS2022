@@ -1,0 +1,78 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: AWS2022 CloudFront
+
+Parameters:
+  S3Stack:
+    Type: String
+    Description: Name of S3 Stack.
+    MinLength: 1
+    MaxLength: 255
+    AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
+    Default: CloudFront1S3Images
+
+  LBStack:
+    Type: String
+    Description: Name of LB Stack.
+    MinLength: 1
+    MaxLength: 255
+    AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
+    Default: LB
+
+Resources:
+  QYTCloudFront:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Origins:
+          - DomainName:
+              Fn::ImportValue: !Sub ${S3Stack}-DNSName
+            Id: S3Images  # 第一个源 存放静态图片的S3
+            CustomOriginConfig:
+              HTTPSPort: 443
+              OriginProtocolPolicy: https-only  # S3需要使用HTTPS访问
+          - DomainName:
+              Fn::ImportValue: !Sub ${LBStack}-DNSName
+            Id: LB  # 第二个源 负载均衡器, 身后是APP实例
+            CustomOriginConfig:
+              HTTPPort: 80
+              OriginProtocolPolicy: http-only  # APP没有激活HTTPS, 所以只能HTTP
+        Enabled: true
+        Aliases:
+          - cloudfront.mingjiao.org  # 这个要和证书一起激活才能使用
+        DefaultCacheBehavior:  # 默认的行为,送到负载均衡器
+          ForwardedValues:
+            QueryString: 'true'  # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-cloudfront-distribution-forwardedvalues.html
+          TargetOriginId: LB
+          ViewerProtocolPolicy: redirect-to-https # allow-all | https-only | redirect-to-https (客户的访问从HTTP重定向到HTTPS)
+        CacheBehaviors:
+          - PathPattern: 'static/images/*'  # 这个路径送往S3
+            TargetOriginId: S3Images
+            ViewerProtocolPolicy: redirect-to-https # allow-all | https-only | redirect-to-https (客户的访问从HTTP重定向到HTTPS)
+            Compress: true
+            MinTTL: 0
+            DefaultTTL: 3600
+            MaxTTL: 31536000
+            AllowedMethods:
+              - GET
+              - HEAD
+            CachedMethods:
+              - GET
+              - HEAD
+            ForwardedValues:
+              QueryString: 'false'
+        PriceClass: PriceClass_100  # PriceClass_100 | PriceClass_200 | PriceClass_All
+        ViewerCertificate:  # 证书配置
+          AcmCertificateArn: arn:aws:acm:us-east-1:609047981853:certificate/ebee27ec-fb66-48d8-ac7a-9d24e883586f
+          MinimumProtocolVersion: TLSv1.2_2018
+          SslSupportMethod: sni-only
+
+  QYTCloudFrontDNSName:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: Z1JOS2YODO11W5
+      Comment: CloudFront Domian Name
+      Name: cloudfront.mingjiao.org
+      Type: CNAME
+      TTL: 30
+      ResourceRecords:
+        - !GetAtt QYTCloudFront.DomainName

@@ -1,0 +1,42 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: CloudFront S3 and Images
+
+Resources:
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: aws2022imagess3
+#      WebsiteConfiguration:
+#        IndexDocument: index.html
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: false # new
+        RestrictPublicBuckets: false # any
+    DeletionPolicy: Retain
+
+  BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      PolicyDocument:
+        Id: PulicAccess
+        Version: 2012-10-17
+        Statement:
+          -   Sid: PublicReadForGetBucketObjects
+              Effect: Allow
+              Principal: '*'
+              Action: 's3:GetObject'
+              Resource: !Join
+                - ''
+                -   - 'arn:aws:s3:::'
+                    - !Ref S3Bucket
+                    - /*
+      Bucket: !Ref S3Bucket
+
+Outputs:
+    S3DNSName:
+        Description: S3 DNS Name
+        Value:
+          Fn::Join: ["", [!Ref S3Bucket, '.s3.amazonaws.com']]
+        Export:
+          Name: !Sub ${AWS::StackName}-DNSName

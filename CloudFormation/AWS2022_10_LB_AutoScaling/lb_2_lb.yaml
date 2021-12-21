@@ -99,3 +99,9 @@ Outputs:
       Value: !Ref TargetGroup
       Export:
         Name: !Sub ${AWS::StackName}-TargetGroupArn
+
+    LBDNS:
+      Description: LB DNS Name
+      Value: !GetAtt LoadBalancer.DNSName
+      Export:
+        Name: !Sub ${AWS::StackName}-DNSName

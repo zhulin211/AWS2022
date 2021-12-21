@@ -1,0 +1,378 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Route53 USE EC2
+Parameters:
+    KeyName: # EC2 SSH 秘钥
+        Type: AWS::EC2::KeyPair::KeyName
+        Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+        ConstraintDescription: must be the name of an existing EC2 KeyPair
+        Default: us-east-1-key
+
+    EnvType: # 环境类型， 后续可以使用条件语句，不同环境不同配置
+        Type: String
+        Description: Environment type
+        Default: dev
+        AllowedValues:
+            - dev # 开发环境
+            - prod # 生产环境
+        ConstraintDescription: Choice Env Type to Select Instance Type
+
+Conditions:
+    CreateProdResources: # 条件一：CreateProdResources 生产环境
+        Fn::Equals:
+            - !Ref EnvType
+            - prod
+    CreateDevResources: # 条件二：CreateDevResources 开发环境
+        Fn::Equals:
+            - !Ref EnvType
+            - dev
+Metadata:
+    "AWS::CloudFormation::Interface":
+        ParameterGroups: # 参数组对参数进行归类
+            - Label:
+                default: EC2 Configuration
+              Parameters:
+                  - EnvType
+                  - KeyName
+
+        ParameterLabels:
+            KeyName: # 给参数做标签
+                "default": "Which Key For SSH"
+
+Mappings:
+    AWSRegionArch2AMI: # 镜像映射
+        ap-northeast-2:
+            HVMG2: ami-03461b78fdba0ff9d
+        ap-southeast-2:
+            HVMG2: ami-09f765d333a8ebb4b
+        us-east-1:
+            HVMG2: ami-04d29b6f966df1537
+        us-west-1:
+            HVMG2: ami-028f2b5ee08012131
+
+Resources:
+  QYTVPC: # 创建VPC
+    Type: AWS::EC2::VPC
+    DeletionPolicy: Delete
+    Properties:
+      CidrBlock: 10.11.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: QYT_VPC_USE
+
+  # 网络USENet1
+  USENet1:
+    Type: "AWS::EC2::Subnet"
+    DeletionPolicy: Delete
+    Properties:
+      AvailabilityZone: # 选择第一个（0）AZ
+        "Fn::Select":
+          - 0
+          - "Fn::GetAZs": ""
+      CidrBlock: 10.11.1.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: USE_Net_1
+      VpcId: !Ref QYTVPC
+
+  # 路由表  USERouteTable, 关联VPC
+  USERouteTable:
+      Type: "AWS::EC2::RouteTable"
+      Properties:
+          VpcId: !Ref QYTVPC
+          Tags:
+              - Key: Name
+                Value: USE_Route_Table
+
+  # 关联子网USE-Net-1到路由表USE_Route_Table
+  USENet1Association:
+      Type: "AWS::EC2::SubnetRouteTableAssociation"
+      Properties:
+          RouteTableId: !Ref USERouteTable
+          SubnetId: !Ref USENet1
+
+  # Internet网关
+  USEInternetGW:
+      Type: "AWS::EC2::InternetGateway"
+      DeletionPolicy: Delete
+      Properties:
+          Tags:
+              - Key: Name
+                Value: USEInternetGW
+
+  # 关联USE Internet GW到VPC
+  AttachGW:
+      Type: "AWS::EC2::VPCGatewayAttachment"
+      Properties:
+          VpcId: !Ref QYTVPC
+          InternetGatewayId: !Ref USEInternetGW
+
+  # 配置USE_Route_Table路由表的默认路由
+  USEDefaultRoute:
+      Type: "AWS::EC2::Route"
+      Properties:
+          DestinationCidrBlock: 0.0.0.0/0
+          GatewayId: !Ref USEInternetGW
+          RouteTableId: !Ref USERouteTable
+
+  # 配置SecurityGroup
+  EC2SecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupName: use_ec_sg
+      GroupDescription: Allow HTTP and SSH
+      VpcId: !Ref QYTVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: use_ec_sg
+
+  WebServiceRole:
+      Type: "AWS::IAM::Role"
+      Properties:
+          AssumeRolePolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                  -   Effect: "Allow"
+                      Principal:
+                          Service:
+                              - "ec2.amazonaws.com"
+                      Action:
+                          - "sts:AssumeRole"
+          Path: "/"
+          ManagedPolicyArns:
+              - arn:aws:iam::aws:policy/AWSCodeCommitFullAccess
+              - arn:aws:iam::aws:policy/AmazonS3FullAccess
+              - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+              - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+              - arn:aws:iam::aws:policy/AmazonSSMFullAccess
+
+  WebService:
+      Type: "AWS::IAM::InstanceProfile"
+      Properties:
+          Path: /
+          Roles:
+              - !Ref WebServiceRole
+
+  EC2Instance:
+      Type: "AWS::EC2::Instance"
+      Metadata:
+          "AWS::CloudFormation::Init": # cfn-init安装配置
+              configSets:
+                  Yum_Install: # YUM安装依赖模块
+                      - enable_with_extra_packages
+                      - Yum_Install
+                  Python_Packages_and_Files: # Python与相关模块
+                      - python_packages_and_files
+                  uWSGI_Nginx_Service: # uwsgi与nginx
+                      - uwsgi_service
+                      - nginx_files
+                      - nginx_service
+              enable_with_extra_packages: # 为了安装nginx激活扩展包
+                  commands:
+                      enable_nginx:
+                          command: "amazon-linux-extras enable nginx1.12"
+                          cwd: "~"
+                          ignoreErrors: false
+              Yum_Install:
+                  packages: # 安装包
+                      yum:
+                          git: []
+                          python3 : []
+                          gcc: []
+                          python3-devel: []
+                          nginx: []
+                  files: # 配置文件
+                      "/root/.aws/config":
+                          content: |
+                              [default]
+                              region=us-west-1
+                          mode: "000644"
+                          owner: root
+                          group: root
+                      "/root/.gitconfig":
+                          content: |
+                              [credential]
+                                  helper = !aws codecommit credential-helper $@
+                                  UseHttpPath = true
+                          mode: "000644"
+                          owner: root
+                          group: root
+                  commands: # 执行命令删除nginx.conf
+                      rm_nginx_conf:
+                          command: "rm -f nginx.conf"
+                          cwd: "/etc/nginx"
+                          ignoreErrors: false
+
+              python_packages_and_files:
+                  commands:
+                      git_files: # git aws_flask项目
+                          command: "sudo git clone https://git-codecommit.ap-northeast-2.amazonaws.com/v1/repos/aws_flask /aws_flask"
+                          cwd: "~"
+                          ignoreErrors: false
+                      pip3_boto3: # 安装python模块boto3
+                          command: sudo pip3 install boto3
+                          cmd: "~"
+                          ignoreErrors: false
+                      pip3_flask: # 安装python模块flask
+                          command: sudo pip3 install flask
+                          cmd: "~"
+                          ignoreErrors: false
+                      pip3_uwsgi: # 安装python模块uwsgi
+                          command: sudo pip3 install uwsgi
+                          cmd: "~"
+                          ignoreErrors: false
+                      pip3_requests: # 安装python模块requests
+                          command: sudo pip3 install requests
+                          cmd: "~"
+                          ignoreErrors: false
+
+              uwsgi_service:
+                  files: # 配置uwsgi服务文件
+                      "/etc/systemd/system/qytang.service":
+                          content: |
+                              [Unit]
+                              Description=uWSGI instance to serve qytang
+                              After=network.target
+                              [Service]
+                              User=root
+                              ExecStart=/usr/bin/bash -c 'cd /aws_flask/; /usr/local/bin/uwsgi --ini /aws_flask/app.ini'
+                              [Install]
+                              WantedBy=multi-user.target
+                          mode: "000644"
+                          owner: root
+                          group: root
+                  services: # 激活qytang（uwsgi）服务并确保运行
+                      sysvinit:
+                          qytang:
+                              enable: true
+                              ensureRunning: true
+
+              nginx_files: # 配置nginx.config文件
+                  files:
+                      "/etc/nginx/nginx.conf":
+                          content: |
+                              user nginx;
+                              worker_processes auto;
+                              error_log /var/log/nginx/error.log;
+                              pid /var/run/nginx.pid;
+                              include /usr/share/nginx/modules/*.conf;
+                              events {
+                                  worker_connections 1024;
+                              }
+                              http {
+                                  log_format  main  '$remote_addr - $remote_user [$time_local] \"$request\"'
+                                                    '$status $body_bytes_sent \"$http_referer\"'
+                                                    '\"$http_user_agent\" \"$http_x_forwarded_for\"';
+                                  access_log  /var/log/nginx/access.log  main;
+                                  sendfile            on;
+                                  tcp_nopush          on;
+                                  tcp_nodelay         on;
+                                  keepalive_timeout   65;
+                                  types_hash_max_size 2048;
+                                  include             /etc/nginx/mime.types;
+                                  default_type        application/octet-stream;
+                                  include /etc/nginx/conf.d/*.conf;
+                                  server {
+                                          listen 80;
+                                          location / {
+                                                  include uwsgi_params;
+                                                  uwsgi_pass 127.0.0.1:8001;
+                                                  }
+                                          }
+                                  }
+                          mode: "000744"
+                          owner: nginx
+                          group: nginx
+
+              nginx_service: # 激活nginx服务并确保运行
+                  services:
+                      sysvinit:
+                          nginx:
+                              enable: true
+                              ensureRunning: true
+                              files:
+                                  - "/etc/nginx/nginx.conf"
+      Properties:
+          InstanceType: # 根据不同环境选择不同的实例类型
+              Fn::If:
+                  - CreateProdResources
+                  - c1.xlarge
+                  - Fn::If:
+                        - CreateDevResources
+                        - t2.micro
+                        - t2.nano
+          Tags: # EC2的标签
+              -   Key: Name
+                  Value: USEC2Full
+          KeyName: # EC2使用的秘钥名
+              Ref: KeyName
+          UserData: # EC2的UserData
+              "Fn::Base64":
+                  "Fn::Join":
+                      - ""
+                      -   - "#!/bin/bash -xe\n"
+                          - "yum install -y aws-cfn-bootstrap\n" # 安装cfn
+                          - "/opt/aws/bin/cfn-init "
+                          - "         --stack "
+                          - Ref: "AWS::StackName"
+                          - "         --resource EC2Instance"
+                          - "         --configsets Yum_Install" # 使用Yum_Install安装依赖模块
+                          - "         --region "
+                          - Ref: "AWS::Region"
+                          - "\n"
+                          - "/opt/aws/bin/cfn-init "
+                          - "         --stack "
+                          - Ref: "AWS::StackName"
+                          - "         --resource EC2Instance"
+                          - "         --configsets Python_Packages_and_Files" # 使用Python_Packages_and_Files安装Python及其模块
+                          - "         --region "
+                          - Ref: "AWS::Region"
+                          - "\n"
+                          - "/opt/aws/bin/cfn-init "
+                          - "         --stack "
+                          - Ref: "AWS::StackName"
+                          - "         --resource EC2Instance"
+                          - "         --configsets uWSGI_Nginx_Service" # 使用uWSGI_Nginx_Service安装uwsgi与Nginx
+                          - "         --region "
+                          - Ref: "AWS::Region"
+                          - "\n"
+          IamInstanceProfile: !Ref WebService # IAM Role
+          NetworkInterfaces:
+              - NetworkInterfaceId: !Ref NetworkInterface # 关联网络接口
+                DeviceIndex: 0
+          ImageId: # 找到特定Region的镜像ID
+              Fn::FindInMap:
+                  - AWSRegionArch2AMI
+                  - Ref: AWS::Region
+                  - HVMG2
+
+  NetworkInterface: # EC2调用的网络接口
+      Type: "AWS::EC2::NetworkInterface"
+      Properties:
+          GroupSet:
+            - !Ref EC2SecurityGroup
+          SubnetId: !Ref USENet1
+
+Outputs:
+    InstanceId: # 输出EC2的实例ID
+        Description: InstanceId of the newly created EC2 instance
+        Value: !Ref EC2Instance
+        Export:
+            Name: !Sub ${AWS::StackName}-EC2-ID
+
+    PublicIP: # 输出EC2的公网IP
+        Description: Public IP address of the newly created EC2 instance
+        Value: !GetAtt EC2Instance.PublicIp
+        Export:
+            Name: !Sub ${AWS::StackName}-EC2-IP

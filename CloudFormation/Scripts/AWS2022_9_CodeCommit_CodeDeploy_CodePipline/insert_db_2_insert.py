@@ -1,4 +1,4 @@
-from insert_db_0_db import stu_db
+from CloudFormation.Scripts.AWS2022_9_CodeCommit_CodeDeploy_CodePipline.insert_db_0_db import stu_db
 import boto3
 from CloudFormation.region import region
 

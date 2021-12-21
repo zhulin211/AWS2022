@@ -1,9 +1,10 @@
 import boto3
 import re
-from CloudFormation.Scripts.region import region
+from CloudFormation.region import region
 # client = boto3.client('ec2', region_name=region)
-client = boto3.client('ec2', region_name="ap-northeast-2")
+# client = boto3.client('ec2', region_name="ap-northeast-2")
 # client = boto3.client('ec2', region_name="ap-southeast-2")
+client = boto3.client('ec2', region_name="us-west-1")
 
 
 def get_last_ami2():

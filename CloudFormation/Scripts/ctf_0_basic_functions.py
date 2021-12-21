@@ -1,14 +1,14 @@
 import boto3
 import botocore
-from region import region
 import time
-client = boto3.client('cloudformation', region_name=region)
 
 
-def get_stack_status(stack_name):
+def get_stack_status(stack_name, region='us-east-1'):
+    client = boto3.client('cloudformation', region_name=region)
     response = client.list_stacks()
 
     for s in response.get('StackSummaries'):
+        # print(s.get('StackStatus'))
         if s.get('StackName') == stack_name and s.get('StackStatus') == 'CREATE_COMPLETE':
             return True
         elif s.get('StackName') == stack_name and s.get('StackStatus') == 'UPDATE_COMPLETE':
@@ -16,7 +16,7 @@ def get_stack_status(stack_name):
         elif s.get('StackName') == stack_name and s.get('StackStatus') == 'UPDATE_ROLLBACK_COMPLETE':
             return True
         elif s.get('StackName') == stack_name and s.get('StackStatus') == 'ROLLBACK_COMPLETE':
-            delete_stack(stack_name)
+            delete_stack(stack_name, region=region)
             print('等待五秒删除处于\'ROLLBACK_COMPLETE\'状态的Stack')
             time.sleep(5)
             return False
@@ -27,8 +27,9 @@ def get_stack_status(stack_name):
     return False
 
 
-def create_update_cf(stack_name, template_path, parameters=None):
-    if get_stack_status(stack_name):
+def create_update_cf(stack_name, template_path, region='us-east-1', parameters=None):
+    client = boto3.client('cloudformation', region_name=region)
+    if get_stack_status(stack_name, region=region):
         try:
             response = client.update_stack(
                 StackName=stack_name,
@@ -86,7 +87,8 @@ def create_update_cf(stack_name, template_path, parameters=None):
             print(f'出现错误:{str(e)}')
 
 
-def delete_stack(stack_name):
+def delete_stack(stack_name, region='us-east-1'):
+    client = boto3.client('cloudformation', region_name=region)
     response = client.delete_stack(
         StackName=stack_name,
     )

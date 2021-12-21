@@ -1,0 +1,23 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Route53 A record
+
+Parameters:
+  USEEC2StackName: # 引用EC2 Stack
+    Type: String
+    Description: 引用USE EC2 Stack
+    MinLength: 1
+    MaxLength: 255
+    AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
+    Default: Route53EC2USE
+
+Resources:
+  myDNSRecord:
+    Type: "AWS::Route53::RecordSet"
+    Properties:
+      HostedZoneId: Z1JOS2YODO11W5
+      Comment: API Server Domian Name
+      Name: aws2022.mingjiao.org.
+      Type: A
+      TTL: 30
+      ResourceRecords:
+        - Fn::ImportValue: !Sub ${USEEC2StackName}-EC2-IP

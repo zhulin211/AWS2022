@@ -1,0 +1,24 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: aws 2022 metric filter
+
+Parameters:
+  TrailStackName: # 引用Trail Stack
+    Type: String
+    Description: 引用Trail Stack
+    MinLength: 1
+    MaxLength: 255
+    AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
+    Default: CloudTrailToS3AndCloudWatch
+
+Resources:
+  DynamoDBFilter:
+    Type: AWS::Logs::MetricFilter
+    Properties:
+      LogGroupName:
+        Fn::ImportValue: !Sub ${TrailStackName}-TrailLogGroup
+      FilterPattern: '{$.eventSource="dynamodb.amazonaws.com"&&$.eventName="DescribeTable"}'
+      MetricTransformations:
+        -
+          MetricValue: "1"
+          MetricNamespace: "AWSTrail/DynamoDB"
+          MetricName: "QYTAWSDynamoDB"

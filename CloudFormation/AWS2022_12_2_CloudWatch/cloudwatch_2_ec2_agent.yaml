@@ -1,0 +1,306 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Template to install CloudWatchAgent on amazon linux. It was validated on amazon linux 2'
+Parameters:
+    KeyName: # EC2 SSH 秘钥
+        Type: AWS::EC2::KeyPair::KeyName
+        Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+        ConstraintDescription: must be the name of an existing EC2 KeyPair
+        Default: us-east-1-key
+
+    EnvType: # 环境类型， 后续可以使用条件语句，不同环境不同配置
+        Type: String
+        Description: Environment type
+        Default: dev
+        AllowedValues:
+            - dev # 开发环境
+            - prod # 生产环境
+        ConstraintDescription: Choice Env Type to Select Instance Type
+
+Conditions:
+    CreateProdResources: # 条件一：CreateProdResources 生产环境
+        Fn::Equals:
+            - !Ref EnvType
+            - prod
+    CreateDevResources: # 条件二：CreateDevResources 开发环境
+        Fn::Equals:
+            - !Ref EnvType
+            - dev
+Metadata:
+    "AWS::CloudFormation::Interface":
+        ParameterGroups: # 参数组对参数进行归类
+            - Label:
+                default: EC2 Configuration
+              Parameters:
+                  - EnvType
+                  - KeyName
+
+        ParameterLabels:
+            KeyName: # 给参数做标签
+                "default": "Which Key For SSH"
+
+Mappings:
+    AWSRegionArch2AMI: # 镜像映射
+        ap-northeast-2:
+            HVMG2: ami-03461b78fdba0ff9d
+        ap-southeast-2:
+            HVMG2: ami-09f765d333a8ebb4b
+        us-east-1:
+            HVMG2: ami-04d29b6f966df1537
+        us-west-1:
+            HVMG2: ami-028f2b5ee08012131
+
+Resources:
+  QYTVPC: # 创建VPC
+    Type: AWS::EC2::VPC
+    DeletionPolicy: Delete
+    Properties:
+      CidrBlock: 10.11.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: QYT_VPC_For_CloudWatch
+
+  # 网络CloudWatchNet1
+  CloudWatchNet1:
+    Type: "AWS::EC2::Subnet"
+    DeletionPolicy: Delete
+    Properties:
+      AvailabilityZone: # 选择第一个（0）AZ
+        "Fn::Select":
+          - 0
+          - "Fn::GetAZs": ""
+      CidrBlock: 10.11.1.0/24
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: CloudWatch_Net_1
+      VpcId: !Ref QYTVPC
+
+  # 路由表  CloudWatchRouteTable, 关联VPC
+  CloudWatchRouteTable:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref QYTVPC
+      Tags:
+        - Key: Name
+          Value: CloudWatch_Route_Table
+
+  # 关联子网CloudWatch-Net-1到路由表CloudWatch_Route_Table
+  CloudWatchNet1Association:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      RouteTableId: !Ref CloudWatchRouteTable
+      SubnetId: !Ref CloudWatchNet1
+
+  # Internet网关
+  CloudWatchInternetGW:
+    Type: "AWS::EC2::InternetGateway"
+    DeletionPolicy: Delete
+    Properties:
+      Tags:
+        - Key: Name
+          Value: CloudWatchInternetGW
+
+  # 关联CloudWatch Internet GW到VPC
+  AttachGW:
+    Type: "AWS::EC2::VPCGatewayAttachment"
+    Properties:
+      VpcId: !Ref QYTVPC
+      InternetGatewayId: !Ref CloudWatchInternetGW
+
+  # 配置CloudWatch_Route_Table路由表的默认路由
+  CloudWatchDefaultRoute:
+    Type: "AWS::EC2::Route"
+    Properties:
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref CloudWatchInternetGW
+      RouteTableId: !Ref CloudWatchRouteTable
+
+  # 配置SecurityGroup
+  EC2SecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupName: ec_sg
+      GroupDescription: Allow HTTP and SSH
+      VpcId: !Ref QYTVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: ec_sg
+
+  WebServiceRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "ec2.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSCodeCommitFullAccess
+        - arn:aws:iam::aws:policy/AmazonS3FullAccess
+        - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
+        - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+        - arn:aws:iam::aws:policy/AmazonSSMFullAccess
+
+  WebService:
+    Type: "AWS::IAM::InstanceProfile"
+    Properties:
+      Path: /
+      Roles:
+        - !Ref WebServiceRole
+
+  NetworkInterface: # EC2调用的网络接口
+    Type: "AWS::EC2::NetworkInterface"
+    Properties:
+      GroupSet:
+        - !Ref EC2SecurityGroup
+      SubnetId: !Ref CloudWatchNet1
+
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Metadata:
+      AWS::CloudFormation::Init:
+        configSets:
+          default:
+            - 01_setupCfnHup
+            - 02_config-amazon-cloudwatch-agent
+            - 03_restart_amazon-cloudwatch-agent
+          UpdateEnvironment:
+            - 02_config-amazon-cloudwatch-agent
+            - 03_restart_amazon-cloudwatch-agent
+        # Definition of json configuration of AmazonCloudWatchAgent, you can change the configuration below.
+        # 文件会转换! 从下面第一个到第二个
+        # /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
+        # /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.toml
+
+        # 加载配置
+        # sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -s -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
+        02_config-amazon-cloudwatch-agent:
+          files:
+            '/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json':
+              content: !Sub |
+                  {
+                    "agent": {
+                          "metrics_collection_interval": 60,
+                          "run_as_user": "root"
+                      },
+                    "metrics": {
+                      "namespace": "QYTAWS/AWS2022",
+                      "append_dimensions": {
+                        "ImageId": "${!aws:ImageId}",
+                        "InstanceId": "${!aws:InstanceId}",
+                        "InstanceType": "${!aws:InstanceType}"
+                      },
+                      "metrics_collected": {
+                        "mem": {
+                          "measurement": [
+                            "mem_used_percent"
+                          ]
+                        },
+                        "swap": {
+                          "measurement": [
+                            "swap_used_percent"
+                          ]
+                        }
+                      }
+                    }
+                  }
+        # Invoke amazon-cloudwatch-agent-ctl to restart the AmazonCloudWatchAgent.
+        03_restart_amazon-cloudwatch-agent:
+          commands:
+            01_stop_service:
+              command: /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a stop
+            02_start_service:
+              command: /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json -s
+        # Cfn-hup setting, it is to monitor the change of metadata.
+        # Cfn-hup 设置, 它可以用来监控metadata的变化.
+        # When there is change in the contents of json file in the metadata section, cfn-hup will call cfn-init to restart the AmazonCloudWatchAgent.
+        01_setupCfnHup:
+          files:
+             '/etc/cfn/cfn-hup.conf':
+               content: !Sub |
+                 [main]
+                 stack=${AWS::StackId}
+                 region=${AWS::Region}
+                 interval=1
+               mode: '000400'
+               owner: root
+               group: root
+             '/etc/cfn/hooks.d/amazon-cloudwatch-agent-auto-reloader.conf':
+               content: !Sub |
+                 [cfn-auto-reloader-hook]
+                 triggers=post.update
+                 path=Resources.EC2Instance.Metadata.AWS::CloudFormation::Init.02_config-amazon-cloudwatch-agent
+                 action=/opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource EC2Instance --region ${AWS::Region} --configsets UpdateEnvironment
+                 runas=root
+               mode: '000400'
+               owner: root
+               group: root
+             "/lib/systemd/system/cfn-hup.service":
+                content: !Sub |
+                  [Unit]
+                  Description=cfn-hup daemon
+                  [Service]
+                  Type=simple
+                  ExecStart=/opt/aws/bin/cfn-hup
+                  Restart=always
+                  [Install]
+                  WantedBy=multi-user.target
+          commands:
+            01enable_cfn_hup:
+              command: !Sub |
+                systemctl enable cfn-hup.service
+            02start_cfn_hup:
+              command: !Sub |
+                systemctl start cfn-hup.service
+
+    Properties:
+      InstanceType: # 根据不同环境选择不同的实例类型
+          Fn::If:
+              - CreateProdResources
+              - c1.xlarge
+              - Fn::If:
+                    - CreateDevResources
+                    - t3.xlarge
+                    - t2.nano
+      Tags: # EC2的标签
+          -   Key: Name
+              Value: CloudWatchEC2Full
+      IamInstanceProfile: !Ref WebService # IAM Role
+      NetworkInterfaces:
+          - NetworkInterfaceId: !Ref NetworkInterface # 关联网络接口
+            DeviceIndex: 0
+      Monitoring: true  # 激活detailed monitoring
+      ImageId: # 找到特定Region的镜像ID
+          Fn::FindInMap:
+              - AWSRegionArch2AMI
+              - Ref: AWS::Region
+              - HVMG2
+      UserData:
+        # This script below is to install AmazonCloudWatchAgent, restart AmazonCloudWatchAgent and tell the result to cloudformation.
+        Fn::Base64: !Sub |
+           #!/bin/bash
+           rpm -Uvh https://s3.amazonaws.com/amazoncloudwatch-agent/amazon_linux/amd64/latest/amazon-cloudwatch-agent.rpm
+           /opt/aws/bin/cfn-init -v --stack ${AWS::StackId} --resource EC2Instance --region ${AWS::Region} --configsets default
+           /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackId} --resource EC2Instance --region ${AWS::Region}
+
+    CreationPolicy:
+      ResourceSignal:
+        Count: 1
+        Timeout: "PT15M"

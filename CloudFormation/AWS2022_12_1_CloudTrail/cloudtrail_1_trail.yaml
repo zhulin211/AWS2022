@@ -1,0 +1,86 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: filebeat trail
+Resources:
+    S3Bucket:
+        DeletionPolicy: Retain
+        Type: AWS::S3::Bucket
+        Properties:
+            BucketName: aws2022-trail-s3-bucket
+
+    BucketPolicy:
+        Type: AWS::S3::BucketPolicy
+        Properties:
+            Bucket:
+                Ref: S3Bucket
+            PolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    -   Sid: "AWSCloudTrailAclCheck"
+                        Effect: "Allow"
+                        Principal:
+                            Service: "cloudtrail.amazonaws.com"
+                        Action: "s3:GetBucketAcl"
+                        Resource: !GetAtt S3Bucket.Arn
+                    -   Sid: "AWSCloudTrailWrite"
+                        Effect: "Allow"
+                        Principal:
+                            Service: "cloudtrail.amazonaws.com"
+                        Action: "s3:PutObject"
+                        Resource:
+                          !Sub |-
+                            arn:aws:s3:::${S3Bucket}/AWSLogs/${AWS::AccountId}/*
+                        Condition:
+                            StringEquals:
+                                s3:x-amz-acl: "bucket-owner-full-control"
+
+
+    TrailLogGroup:
+        Type: AWS::Logs::LogGroup
+        Properties:
+            LogGroupName: aws2022_trail_log_group
+
+    TrailRole:
+        Type: "AWS::IAM::Role"
+        Properties:
+            RoleName: aws2022_trail_role
+            AssumeRolePolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    -   Effect: "Allow"
+                        Principal:
+                            Service:
+                                - "cloudtrail.amazonaws.com"
+                        Action:
+                            - "sts:AssumeRole"
+            Path: "/"
+            ManagedPolicyArns:
+                - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
+
+    myTrail:
+        DependsOn:
+            - BucketPolicy
+        Type: AWS::CloudTrail::Trail
+        Properties:
+            CloudWatchLogsLogGroupArn: !GetAtt TrailLogGroup.Arn
+            CloudWatchLogsRoleArn: !GetAtt TrailRole.Arn
+            EventSelectors:
+                - DataResources:
+                      - Type: AWS::S3::Object  # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-cloudtrail-trail-dataresource.html
+                        Values:
+                            - "arn:aws:s3:::"  # 填写Arn即可
+                  IncludeManagementEvents: true
+                  ReadWriteType: All  # All | ReadOnly | WriteOnly
+            S3BucketName:
+                Ref: S3Bucket
+            IsLogging: true
+            IsMultiRegionTrail: false
+            EnableLogFileValidation: true  # 激活文件校验
+            IncludeGlobalServiceEvents: true
+            TrailName: aws2022_filebeat_trail
+
+Outputs:
+  TrailLogGroup:
+    Description: AWS 2022 TrailLogGroup
+    Value: !Ref TrailLogGroup
+    Export:
+      Name: !Sub ${AWS::StackName}-TrailLogGroup

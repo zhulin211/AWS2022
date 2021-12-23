@@ -304,3 +304,10 @@ Resources:
       ResourceSignal:
         Count: 1
         Timeout: "PT15M"
+
+Outputs:
+    InstanceId: # 输出EC2的实例ID
+        Description: InstanceId of the EC2 instance
+        Value: !Ref EC2Instance
+        Export:
+          Name: !Sub ${AWS::StackName}-InstanceId

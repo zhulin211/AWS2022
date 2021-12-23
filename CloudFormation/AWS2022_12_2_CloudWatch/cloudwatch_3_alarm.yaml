@@ -1,0 +1,43 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Cloudwatch Alarm
+Parameters:
+  EC2StackName: # 引用EC2 Stack
+    Type: String
+    Description: 引用EC2 Stack
+    MinLength: 1
+    MaxLength: 255
+    AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
+    Default: CloudWatchEC2
+
+Resources:
+  HighCPUEvent: # SNS to Notification HighCPU Event
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: HighCPUEvent
+      DisplayName: HighCPUEvent
+      Subscription:
+        -   Endpoint: "collinsctk@qytang.com"
+            Protocol: email
+
+  CPUAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: QYTangCPUAlarm
+      AlarmDescription: CPU alarm for my instance
+      ActionsEnabled: true
+      AlarmActions:
+        - !Ref HighCPUEvent
+        - arn:aws:automate:us-east-1:ec2:stop  # https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_PutMetricAlarm.html
+      MetricName: CPUUtilization
+      Namespace: AWS/EC2
+      Statistic: Average
+      Period: 120
+      DatapointsToAlarm: 1  # "M out of N" alarm, EvaluationPeriods is the N, and DatapointsToAlarm is the M
+      EvaluationPeriods: 1  # "M out of N" alarm, EvaluationPeriods is the N, and DatapointsToAlarm is the M
+      Threshold: 2
+      ComparisonOperator: GreaterThanThreshold
+      TreatMissingData: missing  # breaching, notBreaching, ignore, and missing
+      Dimensions:
+        -   Name: InstanceId
+            Value:
+              Fn::ImportValue: !Sub ${EC2StackName}-InstanceId

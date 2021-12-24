@@ -1,0 +1,42 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS2022 S3 For Elastic BeanStalk
+
+Resources:
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: aws2022-s3-elastic-beanstalk
+      PublicAccessBlockConfiguration:  # 公共访问阻止策略
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: false #  new
+        RestrictPublicBuckets: false  # any
+      Tags:
+        - Key: Department
+          Value: Elastic BeanStalk
+    DeletionPolicy: Retain
+
+  WebSiteBucketPolicy:  # 存储桶策略
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      PolicyDocument:
+        Id: WebSite
+        Version: 2012-10-17
+        Statement:
+          - Sid: WebSiteAccessImages
+            Effect: Allow
+            Principal: '*'
+            Action: 's3:GetObject'
+            Resource: !Join
+              - ''
+              - - 'arn:aws:s3:::'
+                - !Ref S3Bucket
+                - /static/images/*
+
+      Bucket: !Ref S3Bucket
+Outputs:
+    BucketName:
+        Description: VPC ID
+        Value: !Ref S3Bucket
+        Export:
+            Name: !Sub ${AWS::StackName}-BucketName

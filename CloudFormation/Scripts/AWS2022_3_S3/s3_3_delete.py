@@ -31,6 +31,6 @@ if __name__ == '__main__':
     # s3_empty('aws2022-s3-basic')
     # delete_buket('aws2022-s3-basic')
 
-    s3_empty('aws2022imagess3')
-    delete_buket('aws2022imagess3')
+    s3_empty('aws2022-s3-pipeline')
+    delete_buket('aws2022-s3-pipeline')
 

@@ -1,0 +1,110 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Qytang Elastic BeanStalk
+
+Parameters:
+    S3StackName: # 引用S3 Stack
+        Type: String
+        Description: 引用S3 Stack
+        MinLength: 1
+        MaxLength: 255
+        AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
+        Default: QYTEBS3
+
+# 需要有默认VPC(关联InternetGW, 默认路由指向InternetGW)和默认Subnets
+# 下面是如何创建默认Subnet
+# https://docs.aws.amazon.com/vpc/latest/userguide/default-vpc.html#create-default-subnet
+# aws ec2 create-default-subnet --availability-zone us-east-1c
+# 下面是模板参考源
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/quickref-elasticbeanstalk.html
+Resources:
+  QYTApplication:
+    Type: AWS::ElasticBeanstalk::Application
+    Properties:
+      ApplicationName : QytangEBAPP
+      Description: AWS Elastic Beanstalk QYT Application
+  QYTApplicationVersion:
+    Type: AWS::ElasticBeanstalk::ApplicationVersion
+    Properties:
+      ApplicationName:
+        Ref: QYTApplication
+      Description: AWS ElasticBeanstalk QYT Application Version
+      SourceBundle:
+        S3Bucket:
+          Fn::ImportValue: !Sub ${S3StackName}-BucketName
+        # 样本应用介绍与下载
+        # https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/tutorials.html
+        S3Key: python.zip
+  QYTConfigurationTemplate:
+    Type: AWS::ElasticBeanstalk::ConfigurationTemplate
+    Properties:
+      ApplicationName:
+        Ref: QYTApplication
+      Description: AWS ElasticBeanstalk QYT Configuration Template
+      OptionSettings:
+      - Namespace: aws:autoscaling:asg
+        OptionName: MinSize
+        Value: '2'
+      - Namespace: aws:autoscaling:asg
+        OptionName: MaxSize
+        Value: '6'
+      - Namespace: aws:elasticbeanstalk:environment
+        OptionName: EnvironmentType
+        Value: LoadBalanced
+      - Namespace: aws:autoscaling:launchconfiguration
+        OptionName: IamInstanceProfile
+        Value: !Ref MyInstanceProfile
+      # https://docs.aws.amazon.com/elasticbeanstalk/latest/api/API_ListAvailableSolutionStacks.html
+      # >>> import boto3
+      # >>> client = boto3.client('elasticbeanstalk')
+      # >>> from pprint import pprint
+      # >>> pprint(response)
+      # ~~~~~~~忽略大量其他输出~~~~~~~
+      # '64bit Amazon Linux 2 v3.3.9 running Python 3.8',
+      # '64bit Amazon Linux 2 v3.3.9 running Python 3.7',
+      # ~~~~~~~忽略大量其他输出~~~~~~~
+      SolutionStackName: "64bit Amazon Linux 2 v3.3.9 running Python 3.8"
+  QYTEnvironment:
+    Type: AWS::ElasticBeanstalk::Environment
+    Properties:
+      EnvironmentName : QytangEBEnv
+      ApplicationName:
+        Ref: QYTApplication
+      Description: AWS ElasticBeanstalk QYT Environment
+      TemplateName:
+        Ref: QYTConfigurationTemplate
+      VersionLabel:
+        Ref: QYTApplicationVersion
+  MyInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Description: Beanstalk EC2 role
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSElasticBeanstalkWebTier
+        - arn:aws:iam::aws:policy/AWSElasticBeanstalkMulticontainerDocker
+        - arn:aws:iam::aws:policy/AWSElasticBeanstalkWorkerTier
+  MyInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref MyInstanceRole
+
+Outputs:
+    APPName:
+        Description: QYT APP Name
+        Value: !Ref QYTApplication
+        Export:
+            Name: !Sub ${AWS::StackName}-APPName
+    EnvName:
+      Description: QYT Env Name
+      Value: !Ref QYTEnvironment
+      Export:
+        Name: !Sub ${AWS::StackName}-EnvName

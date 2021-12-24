@@ -24,6 +24,7 @@ def upload_folder_to_s3(s3bucket, inputDir, s3Path):
         raise e
 
 
-s3 = boto3.resource('s3', region_name='us-east-1')
-s3bucket = s3.Bucket("aws2022imagess3")
-upload_folder_to_s3(s3bucket, "./static", "static")
+if __name__ == "__main__":
+    s3 = boto3.resource('s3', region_name='us-east-1')
+    s3bucket = s3.Bucket("aws2022imagess3")
+    upload_folder_to_s3(s3bucket, "./static", "static")

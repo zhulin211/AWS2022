@@ -18,6 +18,9 @@ Resources:
       Subscription:
         -   Endpoint: "collinsctk@qytang.com"
             Protocol: email
+        #  可以追加Lambda函数
+#        -   Endpoint: arn:aws:lambda:us-east-1:609047981853:function:ec2_high_cpu
+#            Protocol: lambda
 
   CPUAlarm:
     Type: AWS::CloudWatch::Alarm
@@ -34,7 +37,7 @@ Resources:
       Period: 120
       DatapointsToAlarm: 1  # "M out of N" alarm, EvaluationPeriods is the N, and DatapointsToAlarm is the M
       EvaluationPeriods: 1  # "M out of N" alarm, EvaluationPeriods is the N, and DatapointsToAlarm is the M
-      Threshold: 2
+      Threshold: 3
       ComparisonOperator: GreaterThanThreshold
       TreatMissingData: missing  # breaching, notBreaching, ignore, and missing
       Dimensions:

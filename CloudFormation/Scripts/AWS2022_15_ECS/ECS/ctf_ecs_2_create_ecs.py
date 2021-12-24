@@ -1,13 +1,11 @@
 from Scripts.ctf_0_basic_functions import create_update_cf
 
-import boto3
-from CloudFormation.region import region
-client = boto3.client('cloudformation', region_name=region)
 
 if __name__ == "__main__":
-    template_path = '/ecs_2_ecs.yaml'
-    ecs_stack_name = 'AWS2022_15_ECS'
+    template_path = '../../../AWS2022_15_ECS/ecs_2_ecs.yaml'
+    ecs_stack_name = 'ECS'
     ecs_parameters = [
         {'ParameterKey': "VPCStack", "ParameterValue": 'ECSVPCNETS'},
     ]
+    # 注意创建容易, 删除往往有问题, 建议手动删除资源, 然后删除CloudFormation
     create_update_cf(ecs_stack_name, template_path, parameters=ecs_parameters)

@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Create ECS
+Description: Create ECS Cluster
 
 Parameters:
   VPCStack:
@@ -8,56 +8,64 @@ Parameters:
     Default: ECSVPCNETS
 
 Resources:
-  TargetGroup:
+  TargetGroup:  # 负载均衡器的目标组
+    # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-targetgroup.html
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
+      # 基本信息, 名字,端口和协议
+      Name: QytangTargetGroup
+      Port: 80
+      Protocol: HTTP
+      # 健康检查
       HealthCheckEnabled: true
       HealthCheckPort: 80
       HealthCheckProtocol: HTTP
-      Port: 80
-      Name: QytangTargetGroup
-      Protocol: HTTP
+      # ECS的IP自动注册到Target Group
       TargetType: ip
+      # Target Group所在的VPC
       VpcId:
         Fn::ImportValue: !Sub ${VPCStack}-VPCID
       Tags:
         - Key: Name
           Value: ECS_TG
 
-  LoadBalancer:
+  LoadBalancer:  # 负载均衡器
+    # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-loadbalancer.html
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-      Name: QytangECSALB
-      Scheme: internet-facing
-      Subnets:
+      Name: QytangECSALB  # 名字
+      Scheme: internet-facing  # 面向互联网的负载均衡器 (internal | internet-facing)
+      Subnets:  # 负载均衡器所在子网
         - Fn::ImportValue: !Sub ${VPCStack}-ECSNet1-ID
         - Fn::ImportValue: !Sub ${VPCStack}-ECSNet2-ID
       SecurityGroups:
-        - Fn::ImportValue: !Sub ${VPCStack}-ECSSecurityGroup-ID
+        - Fn::ImportValue: !Sub ${VPCStack}-ECSSecurityGroup-ID  # 负载均衡过滤用的Security Group
       Tags:
         - Key: Name
           Value: ECS_ALB
 
   Listener:
+    # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-listener.html
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
-      DefaultActions:
+      DefaultActions:  # 默认行为
         - Order: 1
           TargetGroupArn: !Ref TargetGroup
           Type: forward
-      LoadBalancerArn: !Ref LoadBalancer
+      LoadBalancerArn: !Ref LoadBalancer  # 关联负载均衡器
       Port: 80
       Protocol: HTTP
     DependsOn:
       - TargetGroup
 
-  ECSCluster:
-    Type: 'AWS::ECS::Cluster'
+  ECSCluster:  # ECS集群
+    # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-cluster.html
+    Type: AWS::ECS::Cluster
     Properties:
-      ClusterName: QytangFargateCluster
+      ClusterName: QytangFargateCluster  # 集群的名字
 
-  ECSRole:
-    Type: 'AWS::IAM::Role'
+  ECSRole:  # ECS执行的权限
+    Type: AWS::IAM::Role
     Properties:
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
@@ -73,12 +81,13 @@ Resources:
             Action:
               - 'sts:AssumeRole'
 
-  FargateServiceTaskDefinition:
+  FargateServiceTaskDefinition:  # 类似于K8S的Pod
+    # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-taskdefinition.html
     Type: AWS::ECS::TaskDefinition
     Properties:
       ContainerDefinitions:
         -
-          Name: QytangNginx
+          Name: QytangLB
           Essential: true
           Image: 609047981853.dkr.ecr.us-east-1.amazonaws.com/qytang_nginx:latest
           PortMappings:
@@ -93,7 +102,9 @@ Resources:
       RequiresCompatibilities:
         -  FARGATE
 
-  FargateService:
+  FargateService:  # Service是多种调度方案之一, 类似于K8S的Deployment
+    # 调度方案介绍
+    # https://docs.aws.amazon.com/AmazonECS/latest/developerguide/scheduling_tasks.html
     Type: AWS::ECS::Service
     DependsOn: Listener
     Properties:
@@ -101,19 +112,19 @@ Resources:
       Cluster: !Ref ECSCluster
       DeploymentController:
         Type: ECS
-      DesiredCount: 1
+      DesiredCount: 1  # 这个就是副本数量, 先保持1个, 便于后续测试扩容
       HealthCheckGracePeriodSeconds: 60
       LaunchType: FARGATE
       LoadBalancers:
-        - ContainerName: QytangNginx
+        - ContainerName: QytangLB  # 这个名字一定要和在FargateServiceTaskDefinition --- ContainerDefinitions 定义的名字一致
           ContainerPort: 80
-          TargetGroupArn: !Ref TargetGroup
+          TargetGroupArn: !Ref TargetGroup  # 放入负载均衡的Target Group
       NetworkConfiguration:
           AwsvpcConfiguration:
-            SecurityGroups:
+            SecurityGroups:  # 访问控制用的Security Group
               -
                 Fn::ImportValue: !Sub ${VPCStack}-ECSSecurityGroup-ID
-            Subnets:
+            Subnets:  # 容器会动态分散到下面的子网
               -
                 Fn::ImportValue: !Sub ${VPCStack}-ECSNet1-ID
               -

@@ -1,33 +1,31 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Create AWS2022_15_2_ECS
-
-Parameters:
-  ECSStack:
-    Type: String
-    Description: Name of AWS2022_15_2_ECS stack
-    Default: AWS2022_15_2_ECS
+Description: Create ECS Auto Scaling
 
 Resources:
+  # 注意ECR的GUI配置, 要到Service的Update向导里边才能设置
   ScalableTarget:
+    # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-applicationautoscaling-scalabletarget.html
     Type: AWS::ApplicationAutoScaling::ScalableTarget
     Properties:
-      MaxCapacity: 3
-      MinCapacity: 1
-      RoleARN:
+      MaxCapacity: 3  # 扩容的最大副本数量
+      MinCapacity: 1  # 扩容的最小副本数量
+      RoleARN:  # 权限Role, 是一个内置的Role
         Fn::Sub: 'arn:aws:iam::${AWS::AccountId}:role/aws-service-role/cassandra.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_CassandraTable'
       ServiceNamespace: ecs
-      ScalableDimension: "ecs:service:DesiredCount"
-      ResourceId: service/QytangFargateCluster/QytangService #service/<Cluster名称>/<Service名称>
+      ScalableDimension: "ecs:service:DesiredCount"  # 扩容ECS副本数量
+      ResourceId: service/QytangFargateCluster/QytangService #service/<Cluster名称>/<Service名称>  # Service的资源ID
 
   TargetTrackingScalingPolicy:
+    # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-applicationautoscaling-scalingpolicy.html#cfn-applicationautoscaling-scalingpolicy-policytype
     Type: AWS::ApplicationAutoScaling::ScalingPolicy
     Properties:
-      PolicyName: cpu75-target-tracking-scaling-policy
-      PolicyType: TargetTrackingScaling
-      ScalingTargetId: !Ref ScalableTarget
-      TargetTrackingScalingPolicyConfiguration:
+      PolicyName: cpu-target-tracking-scaling-policy
+      PolicyType: TargetTrackingScaling  # StepScaling | TargetTrackingScaling
+      ScalingTargetId: !Ref ScalableTarget  # 扩容的目标
+      TargetTrackingScalingPolicyConfiguration:  # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-applicationautoscaling-scalingpolicy-targettrackingscalingpolicyconfiguration.html
         TargetValue: 30.0   # 会自动基于此阈值设置CloudWatch的Alarm和Action
         ScaleInCooldown: 10
         ScaleOutCooldown: 10
         PredefinedMetricSpecification:
-          PredefinedMetricType: ECSServiceAverageCPUUtilization
+          # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-applicationautoscaling-scalingpolicy-predefinedmetricspecification.html
+          PredefinedMetricType: ECSServiceAverageCPUUtilization  # 平均CPU利用率

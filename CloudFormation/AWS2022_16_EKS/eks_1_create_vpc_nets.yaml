@@ -42,6 +42,8 @@ Resources:
       Tags:
         - Key: Name
           Value: EKS_Net1
+        # 集群使用Tag查询集群子网
+        # https://aws.amazon.com/cn/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
         - Key: kubernetes.io/role/elb
           Value: 1
         - Key: kubernetes.io/cluster/QytangCluster
@@ -62,6 +64,8 @@ Resources:
       Tags:
         - Key: Name
           Value: EKS_Net2
+        # 集群使用Tag查询集群子网
+        # https://aws.amazon.com/cn/premiumsupport/knowledge-center/eks-vpc-subnet-discovery/
         - Key: kubernetes.io/role/elb
           Value: 1
         - Key: kubernetes.io/cluster/QytangCluster

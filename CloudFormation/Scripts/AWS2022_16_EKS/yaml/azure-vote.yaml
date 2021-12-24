@@ -78,7 +78,7 @@ kind: Service
 metadata:
   name: azure-vote-front
 spec:
-  type: LoadBalancer
+  type: LoadBalancer  # 使用EKS内置负载均衡器
   ports:
   - port: 80
   selector:

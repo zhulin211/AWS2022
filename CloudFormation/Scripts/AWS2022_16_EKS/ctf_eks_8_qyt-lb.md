@@ -4,6 +4,9 @@ kubectl apply -f /Users/qinke/PycharmProjects/AWS2022/CloudFormation/Scripts/AWS
 ```
 
 ### 查看POD
+### 如果出现如下错误, 请删除deploy重试
+### Warning  Failed     8m16s (x4 over 9m49s)   kubelet            Failed to pull image "609047981853.dkr.ECR.us-east-1.amazonaws.com/qyt_lb:mac_x86_p80": rpc error: code = Unknown desc = Error response from daemon: Head "https://609047981853.dkr.ECR.us-east-1.amazonaws.com/v2/qyt_lb/manifests/mac_x86_p80": no basic auth credentials
+
 ```shell
 qinke@qinkedeMBP dockerfile % kubectl get pod -n qyt-lb
 NAME                                READY   STATUS    RESTARTS   AGE

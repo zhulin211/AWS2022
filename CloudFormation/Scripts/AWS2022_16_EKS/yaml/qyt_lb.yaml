@@ -21,8 +21,7 @@ spec:
     spec:
       containers:
       - name: qyt-lb
-#        image: 609047981853.dkr.ECR.us-east-1.amazonaws.com/qyt_lb:linuxflasksocket_p80
-        image: 609047981853.dkr.ECR.us-east-1.amazonaws.com/qyt_lb:mac_x86_p80
+        image: 609047981853.dkr.ecr.us-east-1.amazonaws.com/qyt_lb:mac_x86_p80
         imagePullPolicy: Always
 
 
@@ -37,7 +36,7 @@ spec:
     - port: 80
       targetPort: 80
       protocol: TCP
-  type: NodePort
+  type: NodePort  # 注意使用aws负载均衡器后的类型
   selector:
     app.kubernetes.io/name: qyt-lb
 ---

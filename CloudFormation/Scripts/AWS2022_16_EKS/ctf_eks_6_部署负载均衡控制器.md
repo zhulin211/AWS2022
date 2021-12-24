@@ -1,6 +1,11 @@
 ### 参考文章
 https://github.com/kubernetes-sigs/aws-load-balancer-controller/tree/main/helm/aws-load-balancer-controller
 
+### 如何安装eksctl
+```shell
+https://docs.aws.amazon.com/zh_cn/eks/latest/userguide/eksctl.html
+```
+
 ### 创建EKS OIDC Provider (这个操作每个集群只需要做一次）
 ```shell
 eksctl utils associate-iam-oidc-provider --cluster=QytangCluster --approve --region us-east-1
@@ -11,7 +16,7 @@ eksctl utils associate-iam-oidc-provider --cluster=QytangCluster --approve --reg
 curl -o iam-policy.json https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/main/docs/install/iam_policy.json
 ```
 
-### 创建名为"AWSLoadBalancerControllerIAMPolicy"的IAM策略
+### 创建名为"AWSLoadBalancerControllerIAMPolicy"的IAM策略(如果以前创建过,会报错)
 ```shell
 aws iam create-policy \
     --policy-name AWSLoadBalancerControllerIAMPolicy \
@@ -19,6 +24,7 @@ aws iam create-policy \
 ```
 
 ### 为负载均衡控制器,创建IAM Role和ServiceAccount
+### 让一个K8S集群内的ServiceAccount,拥有AWS的IAM Role的权限
 ```shell
 eksctl create iamserviceaccount \
 --cluster=QytangCluster \
@@ -34,9 +40,42 @@ eksctl create iamserviceaccount \
 helm repo add eks https://aws.github.io/eks-charts
 ```
 
-### 使用IAM Role作为ServiceAccount安装
+### 使用Helm安装负载均衡控制器, 使用预先创建的ServiceAccount
+### 使用手机+快连翻墙 测试没有问题
 ```shell
-helm install aws-load-balancer-controller eks/aws-load-balancer-controller --set clusterName=QytangCluster -n kube-system --set serviceAccount.create=false --set serviceAccount.name=aws-load-balancer-controller
+helm install aws-load-balancer-controller eks/aws-load-balancer-controller \
+--set clusterName=QytangCluster \
+-n kube-system \
+--set serviceAccount.create=false \
+--set serviceAccount.name=aws-load-balancer-controller
+
+```
+
+### 如果出现Error: INSTALLATION FAILED: failed to download "eks/aws-load-balancer-controller"
+```shell
+qinke@qinkedeMBP ~ % helm repo update  # 尝试更新一下
+Hang tight while we grab the latest from your chart repositories...
+...Successfully got an update from the "eks" chart repository
+Update Complete. ⎈Happy Helming!⎈
+
+qinke@qinkedeMBP ~ % helm search repo  # 查看repo是否有"eks/aws-load-balancer-controller"
+NAME                                            CHART VERSION   APP VERSION     DESCRIPTION                                       
+eks/appmesh-controller                          1.4.4           1.4.2           App Mesh controller Helm chart for Kubernetes     
+eks/appmesh-gateway                             0.1.5           1.0.0           App Mesh Gateway Helm chart for Kubernetes        
+eks/appmesh-grafana                             1.0.4           6.4.3           App Mesh Grafana Helm chart for Kubernetes        
+eks/appmesh-inject                              0.14.8          0.5.0           App Mesh Inject Helm chart for Kubernetes         
+eks/appmesh-jaeger                              1.0.2           1.19.0          App Mesh Jaeger Helm chart for Kubernetes         
+eks/appmesh-prometheus                          1.0.0           2.13.1          App Mesh Prometheus Helm chart for Kubernetes     
+eks/appmesh-spire-agent                         1.0.2           1.0.0           SPIRE Agent Helm chart for AppMesh mTLS support...
+eks/appmesh-spire-server                        1.0.1           1.0.0           SPIRE Server Helm chart for AppMesh mTLS suppor...
+eks/aws-calico                                  0.3.10          3.19.1          A Helm chart for installing Calico on AWS         
+eks/aws-cloudwatch-metrics                      0.0.6           1.247345        A Helm chart to deploy aws-cloudwatch-metrics p...
+eks/aws-for-fluent-bit                          0.1.11          2.13.0          A Helm chart to deploy aws-for-fluent-bit project 
+eks/aws-load-balancer-controller                1.3.3           v2.3.1          AWS Load Balancer Controller Helm chart for Kub...
+eks/aws-node-termination-handler                0.16.0          1.14.0          A Helm chart for the AWS Node Termination Handler 
+eks/aws-sigv4-proxy-admission-controller        0.1.2           1               AWS SIGv4 Admission Controller Helm Chart for K...
+eks/aws-vpc-cni                                 1.1.12          v1.10.1         A Helm chart for the AWS VPC CNI                  
+eks/csi-secrets-store-provider-aws              0.0.1           1.0.r2          A Helm chart to install the Secrets Store CSI D...
 ```
 
 ### 查看pod

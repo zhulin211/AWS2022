@@ -8,14 +8,14 @@ Parameters:
     Default: EKSVPCNETS
 
 Resources:
-  EKSRole:
+  EKSRole:  # 集群角色
     Type: 'AWS::IAM::Role'
     Properties:
       RoleName: QYTEKSClusterRole
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/AmazonEKSClusterPolicy'
         - 'arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy'
-        - 'arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly'
+        - 'arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly'  # 下载镜像权限 https://aws.amazon.com/premiumsupport/knowledge-center/eks-ecr-troubleshooting/
         - 'arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy'
       AssumeRolePolicyDocument:
         Version: 2012-10-17
@@ -27,13 +27,14 @@ Resources:
                 - ec2.amazonaws.com
             Action:
               - 'sts:AssumeRole'
-  NodeRole:
+
+  NodeRole:  # 节点角色
     Type: 'AWS::IAM::Role'
     Properties:
       RoleName: QYTEKSNodeRole
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy'
-        - 'arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly'
+        - 'arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly'   # 下载镜像权限 https://aws.amazon.com/premiumsupport/knowledge-center/eks-ecr-troubleshooting/
         - 'arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy'
       AssumeRolePolicyDocument:
         Version: 2012-10-17
@@ -45,24 +46,25 @@ Resources:
                 - eks.amazonaws.com
             Action:
               - 'sts:AssumeRole'
-  EKSCluster:
+  EKSCluster:  # 创建EKS集群
+      # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-eks-cluster.html
       Type: AWS::EKS::Cluster
       Properties:
-        Name: QytangCluster
-        Version: "1.21"
-        RoleArn:
+        Name: QytangCluster  # 集群名称
+        Version: "1.21"  # K8S版本
+        RoleArn:  # 集群角色
           "Fn::GetAtt": ["EKSRole", "Arn"]
         ResourcesVpcConfig: # 配置参数介绍 https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-eks-cluster-resourcesvpcconfig.html
-          SecurityGroupIds:
+          SecurityGroupIds:  # 用于过滤的Security Group
             - Fn::ImportValue: !Sub ${VPCStack}-EKSSecurityGroup-ID
-          SubnetIds:
+          SubnetIds:  # 集群(管理节点)使用的VPC子网
             - Fn::ImportValue: !Sub ${VPCStack}-EKSNet1-ID
             - Fn::ImportValue: !Sub ${VPCStack}-EKSNet2-ID
-          EndpointPublicAccess: true
-          EndpointPrivateAccess: true
+          EndpointPublicAccess: true  # 允许外部访问
+          EndpointPrivateAccess: true  # 允许内部访问
           PublicAccessCidrs: [ "0.0.0.0/0" ] # 允许外部访问的源地址,默认就是0.0.0.0/0
         Logging:
-          ClusterLogging:
+          ClusterLogging:  # 日志记录的类型
             EnabledTypes: # 类型 https://docs.aws.amazon.com/eks/latest/APIReference/API_LogSetup.html#AmazonEKS-Type-LogSetup-types
               - Type: api
               - Type: audit
@@ -72,21 +74,21 @@ Resources:
           - Key: Name
             Value: EKS_Cluster
 
-  EKSNodegroup:
+  EKSNodegroup:  # EKS计算节点
     Type: 'AWS::EKS::Nodegroup'
     DependsOn: EKSCluster
     Properties:
-      ClusterName: QytangCluster
-      InstanceTypes:
+      ClusterName: QytangCluster  # 集群的名称, 需要和上面的名称一直
+      InstanceTypes:  # 计算节点的实例类型
         - t2.micro
-      NodeRole:
+      NodeRole:  # 计算节点的角色
         Fn::GetAtt: ["EKSRole", "Arn"]
-      ScalingConfig:
+      ScalingConfig:  # 自动扩容设置
         MinSize: 1
         DesiredSize: 7
         MaxSize: 7
       Labels:
         Name: QYTEKSNodeGroup
-      Subnets:
+      Subnets:  # 计算节点所在的子网
         - Fn::ImportValue: !Sub ${VPCStack}-EKSNet1-ID
         - Fn::ImportValue: !Sub ${VPCStack}-EKSNet2-ID

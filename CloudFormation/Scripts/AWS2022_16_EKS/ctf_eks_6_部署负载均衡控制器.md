@@ -41,7 +41,7 @@ helm repo add eks https://aws.github.io/eks-charts
 ```
 
 ### 使用Helm安装负载均衡控制器, 使用预先创建的ServiceAccount
-### 使用手机+快连翻墙 测试没有问题
+### 使用 快连翻墙 测试没有问题
 ```shell
 helm install aws-load-balancer-controller eks/aws-load-balancer-controller \
 --set clusterName=QytangCluster \

@@ -1,0 +1,17 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Create ECR Repo
+
+Resources:
+  MyRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: qytangrepo
+      EncryptionConfiguration:
+        EncryptionType: AES256
+      ImageScanningConfiguration:
+        ScanOnPush: true
+Outputs:
+  Arn:
+    Value: !GetAtt MyRepository.Arn
+  RepositoryUri:
+    Value: !GetAtt MyRepository.RepositoryUri

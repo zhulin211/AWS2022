@@ -2,13 +2,14 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: Create ECR Repo
 
 Resources:
-  MyRepository:
+  MyRepository:  # 私有Repo, 如果希望做Public Repo,使用 AWS::ECR::PublicRepository [https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ecr-publicrepository.html]
+    # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ecr-repository.html
     Type: AWS::ECR::Repository
     Properties:
-      RepositoryName: qytangrepo
-      EncryptionConfiguration:
+      RepositoryName: qytangrepo  # 名字注意都小写
+      EncryptionConfiguration:  # 加密
         EncryptionType: AES256
-      ImageScanningConfiguration:
+      ImageScanningConfiguration:  # 镜像安全扫描
         ScanOnPush: true
 Outputs:
   Arn:

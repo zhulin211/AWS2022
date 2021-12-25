@@ -108,7 +108,7 @@ Resources:
       Type: "AWS::EC2::SecurityGroup"
       Properties:
           GroupName: eks_sg
-          GroupDescription: Allow ALL
+          GroupDescription: Allow ALL  # 去往EKS集群的流量, 这个地方我全放了
           VpcId: !Ref QYTVPC
           SecurityGroupIngress:
               - IpProtocol: -1

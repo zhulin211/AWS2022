@@ -35,18 +35,18 @@ Resources:
     Properties:
       Name: QytangECSALB  # 名字
       Scheme: internet-facing  # 面向互联网的负载均衡器 (internal | internet-facing)
-      Subnets:  # 负载均衡器所在子网
+      Subnets:  # 负载均衡器所在子网 [Application Load Balancers] You must specify subnets from at least two Availability Zones.
         - Fn::ImportValue: !Sub ${VPCStack}-ECSNet1-ID
         - Fn::ImportValue: !Sub ${VPCStack}-ECSNet2-ID
       SecurityGroups:
-        - Fn::ImportValue: !Sub ${VPCStack}-ECSSecurityGroup-ID  # 负载均衡过滤用的Security Group
+        - Fn::ImportValue: !Sub ${VPCStack}-ECSSecurityGroup-ID  # 负载均衡过滤用的Security Group, 过滤北向南进入负载均衡器的流量
       Tags:
         - Key: Name
           Value: ECS_ALB
 
   Listener:
     # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-elasticloadbalancingv2-listener.html
-    Type: AWS::ElasticLoadBalancingV2::Listener
+    Type: AWS::ElasticLoadBalancingV2::Listener  # 负载均衡器的侦听端口和策略, 可以设置SSL和证书
     Properties:
       DefaultActions:  # 默认行为
         - Order: 1
@@ -57,6 +57,11 @@ Resources:
       Protocol: HTTP
     DependsOn:
       - TargetGroup
+
+  ECSLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ecs/QytangServiceTaskDefinition
 
   ECSCluster:  # ECS集群
     # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-cluster.html
@@ -69,6 +74,12 @@ Resources:
     Properties:
       ManagedPolicyArns:
         - 'arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy'
+        # "ecr:GetAuthorizationToken",
+        # "ecr:BatchCheckLayerAvailability",
+        # "ecr:GetDownloadUrlForLayer",
+        # "ecr:BatchGetImage",  # 包括ECR相关策略, 可以下载私有镜像
+        # "logs:CreateLogStream",
+        # "logs:PutLogEvents"
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -85,20 +96,35 @@ Resources:
     # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ecs-taskdefinition.html
     Type: AWS::ECS::TaskDefinition
     Properties:
-      ContainerDefinitions:
+      ContainerDefinitions:  # 定义容器 https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-ecs-taskdefinition-containerdefinitions.html
         -
           Name: QytangLB
           Essential: true
+          # If the essential parameter of a container is marked as true, and that container fails or stops for any reason,
+          # all other containers that are part of the task are stopped. If the essential parameter of a container is marked as false,
+          # its failure doesn't affect the rest of the containers in a task. If this parameter is omitted,
+          # a container is assumed to be essential.
           Image: 609047981853.dkr.ecr.us-east-1.amazonaws.com/qytang_nginx:latest
           PortMappings:
             -
               ContainerPort: 80
               HostPort: 80
               Protocol: tcp
+          # Send logs to CloudWatch Logs
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-region: !Ref AWS::Region
+              awslogs-group: !Ref ECSLogGroup
+              awslogs-stream-prefix: ecs
       Cpu: '256'
-      ExecutionRoleArn: !Ref ECSRole
+      ExecutionRoleArn: !Ref ECSRole  # 由于有权限,所以可以从ECR下载私有镜像!
       Memory: '512'
-      NetworkMode: awsvpc
+      NetworkMode: awsvpc  # awsvpc | bridge | host | none
+      # 如果使用Fargate 必须使用awsvpc
+      # The Docker networking mode to use for the containers in the task.
+      # The valid values are none, bridge, awsvpc, and host. The default Docker network mode is bridge.
+      # If you are using the Fargate launch type, the awsvpc network mode is required.
       RequiresCompatibilities:
         -  FARGATE
 

@@ -1,22 +1,23 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: Full EC2
-Parameters:
+Parameters:  # 参数详细介绍 https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html
     KeyName: # EC2 SSH 秘钥
-        Type: AWS::EC2::KeyPair::KeyName
+        Type: AWS::EC2::KeyPair::KeyName  # AWS特殊的参数类型(AWS-specific parameter types)
+        # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/parameters-section-structure.html#aws-specific-parameter-types
         Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
-        ConstraintDescription: must be the name of an existing EC2 KeyPair
-        Default: us-east-1-key
+        ConstraintDescription: must be the name of an existing EC2 KeyPair  # 对输入约束的描述
+        Default: us-east-1-key  # 默认值
 
-    NetworkStackName: # 引用之前的Stack
-        Type: String
+    NetworkStackName:   # 引用之前的VPC Stack, 可以导入之前Stack导出的参数
+        Type: String    # 类型
         Description: Name of an active CloudFormation stack that contains the networking resources, such as the subnet and security group, that will be used in this stack.
-        MinLength: 1
-        MaxLength: 255
-        AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"
-        Default: EC2VPC
+        MinLength: 1    # 最小长度
+        MaxLength: 255  # 最大长度
+        AllowedPattern: "^[a-zA-Z][-a-zA-Z0-9]*$"  # 校验输入的正则表达式
+        Default: EC2VPC # 默认值
 
 Mappings:
-    AWSRegionArch2AMI: # 镜像映射
+    AWSRegionArch2AMI: # 镜像映射ID , 可以使用脚本"ec2_1_get_images.py" 获取最新的镜像ID
         ap-northeast-2:
             HVMG2: ami-0263588f2531a56bd
         ap-southeast-2:
@@ -32,36 +33,39 @@ Resources:
             AssumeRolePolicyDocument:
                 Version: "2012-10-17"
                 Statement:
-                    -   Effect: "Allow"
+                    -   Effect: "Allow"  # 允许执行获取安全令牌的操作
                         Principal:
                             Service:
-                                - "ec2.amazonaws.com"
+                                - "ec2.amazonaws.com"  # 什么服务可以做获取安全令牌的操作
                         Action:
-                            - "sts:AssumeRole"
-            Path: "/"
-            ManagedPolicyArns:
-                - arn:aws:iam::aws:policy/AWSCodeCommitFullAccess
-                - arn:aws:iam::aws:policy/AmazonS3FullAccess
-                - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess
-                - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess
-                - arn:aws:iam::aws:policy/AmazonSSMFullAccess
+                            - "sts:AssumeRole"  # AWS Security Token Service 获取临时安全令牌的行为
+            Path: /  # Role的放置位置
+            ManagedPolicyArns:  # 权限控制的策略, 下面都是内置策略 [放行得比较宽泛]
+                - arn:aws:iam::aws:policy/AWSCodeCommitFullAccess   # 访问CodeCommit的代码
+                - arn:aws:iam::aws:policy/AmazonS3FullAccess        # 访问S3
+                - arn:aws:iam::aws:policy/AmazonDynamoDBFullAccess  # 访问DynamoDB
+                - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess  # 访问CloudWatchLog
+                - arn:aws:iam::aws:policy/AmazonSSMFullAccess       # Systems Manager Agent (SSM Agent) 完整权限 [主要是登录Terminal用]
 
     WebService:
+        # Use an instance profile to pass an IAM role to an EC2 instance
+        # the console automatically creates an instance profile with the same name as the role
+        # The console does not create an instance profile for a role that is not associated with Amazon EC2. 只给EC2的Role自动创建Instance Profile
         Type: "AWS::IAM::InstanceProfile"
         Properties:
             InstanceProfileName: AWS2022WebServiceInstanceProfileName
-            Path: /
-            Roles:
+            Path: /  # Instance Profile的放置位置
+            Roles:   # 可以把多个Role放入到一个Instance Profile
                 - !Ref WebServiceRole
 
     PlacementGroup:
+        # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-placementgroup.html
         Type: AWS::EC2::PlacementGroup
         Properties:
             Strategy: spread  # cluster | partition | spread
 
     EC2Instance:
         Type: "AWS::EC2::Instance"
-
         Properties:
             InstanceType: t3.micro  # 实例类型
             Tenancy: default  # Allowed values: dedicated | default | host
@@ -72,20 +76,24 @@ Resources:
             KeyName: # EC2使用的秘钥名
                 Ref: KeyName
             UserData: # EC2的UserData
-                "Fn::Base64":
-                    "Fn::Join":
-                        - ""
-                        -   - "#!/bin/bash\n"
-                            - "sudo sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/g' /etc/ssh/sshd_config\n"
-                            - "sudo sed -i 's/#PermitRootLogin yes/PermitRootLogin yes/g' /etc/ssh/sshd_config\n"
-                            - "sudo sed -i 's/UsePAM yes/UsePAM no/g' /etc/ssh/sshd_config\n"
-                            - "sh -c 'echo root:Cisc0123' | sudo chpasswd\n"
-                            - "sudo service sshd restart\n"
-                            - "\n"
-            IamInstanceProfile: !Ref WebService # IAM Role
-            NetworkInterfaces:
-                - NetworkInterfaceId: !Ref NetworkInterface # 关联网络接口
-                  DeviceIndex: 0
+                # Sub的用法(用法很多, 主要用于替换, 'Fn::Sub without a mapping'这个案例, 有点像fstring)
+                # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-sub.html
+                "Fn::Base64": !Sub |
+                    #!/bin/bash
+                    sudo sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+                    sudo sed -i 's/#PermitRootLogin yes/PermitRootLogin yes/g' /etc/ssh/sshd_config
+                    sudo sed -i 's/UsePAM yes/UsePAM no/g' /etc/ssh/sshd_config
+                    sh -c 'echo root:Cisc0123' | sudo chpasswd
+                    sudo service sshd restart
+            # The intrinsic function Ref returns the value of the specified parameter or resource.
+            # !Ref主要用来获取资源<默认>返回的值, 返回的值要查具体资源的文档
+            # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-ref.html
+            # 要获取非默认值, 使用 !GetAtt
+            # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-getatt.html
+            IamInstanceProfile: !Ref WebService # 关联Instance Profile
+            NetworkInterfaces: # 关联网络接口
+                - NetworkInterfaceId: !Ref NetworkInterface  # 网络接口
+                  DeviceIndex: 0  # 位置
             ImageId: # 找到特定Region的镜像ID
                 Fn::FindInMap:
                     - AWSRegionArch2AMI

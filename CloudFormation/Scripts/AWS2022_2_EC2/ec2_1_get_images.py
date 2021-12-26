@@ -8,6 +8,10 @@ client = boto3.client('ec2', region_name="us-west-1")
 
 
 def get_last_ami2():
+    """
+    查看镜像
+    :return 镜像ID:
+    """
     filters = [{'Name': 'description', 'Values': ['Amazon Linux 2 AMI 2.0.*gp2']}]
     # filters = [{'Name': 'description', 'Values': ['Amazon Linux 2 Kernel 5.10 AMI 2.0.*gp2']}]
     response = client.describe_images(Owners=['amazon'], Filters=filters)

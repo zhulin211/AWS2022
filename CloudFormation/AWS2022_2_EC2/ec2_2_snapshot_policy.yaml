@@ -5,7 +5,7 @@ Resources:
   dlmRole:
     Type: AWS::IAM::Role
     Properties:
-      Path: /service-role/dlm/
+      Path: /service-role/dlm/  # Role放置的目录
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -15,12 +15,13 @@ Resources:
           - sts:AssumeRole
           Principal:
             Service:
-            - dlm.amazonaws.com
+            - dlm.amazonaws.com  # Amazon Data Lifecycle Manager
       Policies:
       - PolicyName: "dlmPolicy"
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
+          # 策略一(创建,删除快照. 查看[Describe]卷,实例和快照的详细信息)
           - Effect: Allow
             Action:
             - ec2:CreateSnapshot
@@ -30,44 +31,46 @@ Resources:
             - ec2:DescribeInstances
             - ec2:DescribeSnapshots
             Resource: "*"
+          # 策略二(可以为EC2快照, 创建标签)
           - Effect: Allow
             Action:
             - ec2:CreateTags
-            Resource: arn:aws:ec2:*::snapshot/*
+            Resource: arn:aws:ec2:*::snapshot/*  # 控制资源的详细访问
 
   dlmLifecyclePolicy:
+    # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-dlm-lifecyclepolicy.html
     Type: "AWS::DLM::LifecyclePolicy"
     Properties:
       Description: "DevOps Lifecycle Policy using CloudFormation 5 Day Retention"
-      State: "ENABLED"
-      ExecutionRoleArn: !GetAtt dlmRole.Arn
+      State: "ENABLED"  # 激活状态
+      ExecutionRoleArn: !GetAtt dlmRole.Arn  # 关联执行角色的权限
       PolicyDetails:
-        ResourceTypes:
+        ResourceTypes: # Use VOLUME to create snapshots of individual volumes or use INSTANCE to create multi-volume snapshots from the volumes for an instance.
           - "INSTANCE"
-        TargetTags:
+        TargetTags:  # 使用这个标签找到需要做快照的目标
           -
             Key: "DLM-BACKUP"
             Value: "YES"
 
         Schedules:
           -
-            Name: "Daily Snapshots 5 Day Retention"
-            TagsToAdd:
+            Name: "Daily Snapshots 5 Day Retention"  # 调度任务的名字
+            TagsToAdd:  # 添加Tag到快照
               -
                 Key: "type"
                 Value: "DailySnapshot"
 
             CreateRule:
-              Interval: 24
-              IntervalUnit: "HOURS"
+              Interval: 24  # 每24小时做一次快照
+              IntervalUnit: "HOURS"  # 每24小时做一次快照
               # UTC The time at which the policy runs are scheduled to start. The first policy run starts within an hour after the scheduled time. 
-              Times:
+              Times:  # 打快照时间
                 - "02:10"
             RetainRule:
-              Count: 5
-            CopyTags: true
+              Count: 5  # 保留五个快照, 由于每24小时打一次快照, 所以快照能保留5天
+            CopyTags: true  # 拷贝源对象的标签到快照
 
-  dlm30LifecyclePolicy:
+  dlm30LifecyclePolicy:  # 快照保留三十天策略
     Type: "AWS::DLM::LifecyclePolicy"
     Properties:
       Description: "DevOps Lifecycle Policy using CloudFormation 30 Day Retention"
@@ -99,7 +102,7 @@ Resources:
               Count: 30
             CopyTags: true
 
-  dlm60LifecyclePolicy:
+  dlm60LifecyclePolicy:  # 快照保留六十天策略
     Type: "AWS::DLM::LifecyclePolicy"
     Properties:
       Description: "DevOps Lifecycle Policy using CloudFormation 60 Day Retention"
@@ -131,7 +134,7 @@ Resources:
               Count: 60
             CopyTags: true
 
-  dlm90LifecyclePolicy:
+  dlm90LifecyclePolicy:  # 快照保留九十天策略
     Type: "AWS::DLM::LifecyclePolicy"
     Properties:
       Description: "DevOps Lifecycle Policy using CloudFormation 90 Day Retention"

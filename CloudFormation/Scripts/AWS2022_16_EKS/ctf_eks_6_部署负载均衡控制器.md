@@ -1,26 +1,28 @@
 ### 参考文章
 https://github.com/kubernetes-sigs/aws-load-balancer-controller/tree/main/helm/aws-load-balancer-controller
 
+### 下载为AWS负载均衡控制器的IAM策略(这个已经由CloudFormation搞定了)
+```shell
+curl -o iam-policy.json https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/main/docs/install/iam_policy.json
+```
+
+### 创建名为"AWSLoadBalancerControllerIAMPolicy"的IAM策略(如果以前创建过,会报错) (这个已经由CloudFormation搞定了)
+```shell
+aws iam create-policy \
+    --policy-name LBIAMPolicy \
+    --policy-document file://iam-policy.json
+```
+
 ### 如何安装eksctl
 ```shell
 https://docs.aws.amazon.com/zh_cn/eks/latest/userguide/eksctl.html
 ```
 
 ### 创建EKS OIDC Provider (这个操作每个集群只需要做一次）
+### 主要是创建了Identity providers
+### https://console.aws.amazon.com/iamv2/home?region=us-east-1#/identity_providers
 ```shell
 eksctl utils associate-iam-oidc-provider --cluster=QytangCluster --approve --region us-east-1
-```
-
-### 下载为AWS负载均衡控制器的IAM策略
-```shell
-curl -o iam-policy.json https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/main/docs/install/iam_policy.json
-```
-
-### 创建名为"AWSLoadBalancerControllerIAMPolicy"的IAM策略(如果以前创建过,会报错)
-```shell
-aws iam create-policy \
-    --policy-name AWSLoadBalancerControllerIAMPolicy \
-    --policy-document file://iam-policy.json
 ```
 
 ### 为负载均衡控制器,创建IAM Role和ServiceAccount
@@ -31,7 +33,7 @@ eksctl create iamserviceaccount \
 --namespace=kube-system \
 --name=aws-load-balancer-controller \
 --region us-east-1 \
---attach-policy-arn=arn:aws:iam::609047981853:policy/AWSLoadBalancerControllerIAMPolicy \
+--attach-policy-arn=arn:aws:iam::609047981853:policy/LBIAMPolicy \
 --approve
 ```
 

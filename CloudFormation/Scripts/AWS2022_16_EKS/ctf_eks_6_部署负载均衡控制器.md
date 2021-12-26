@@ -1,12 +1,12 @@
 ### 参考文章
 https://github.com/kubernetes-sigs/aws-load-balancer-controller/tree/main/helm/aws-load-balancer-controller
 
-### 下载为AWS负载均衡控制器的IAM策略(这个已经由CloudFormation搞定了)
+### 下载为AWS负载均衡控制器的IAM策略(这个已经由CloudFormation搞定了) [如果是GUI创建的集群,需要配置]
 ```shell
 curl -o iam-policy.json https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/main/docs/install/iam_policy.json
 ```
 
-### 创建名为"AWSLoadBalancerControllerIAMPolicy"的IAM策略(如果以前创建过,会报错) (这个已经由CloudFormation搞定了)
+### 创建名为"AWSLoadBalancerControllerIAMPolicy"的IAM策略(如果以前创建过,会报错) (这个已经由CloudFormation搞定了)  [如果是GUI创建的集群,需要配置]
 ```shell
 aws iam create-policy \
     --policy-name LBIAMPolicy \

@@ -37,6 +37,51 @@ eksctl create iamserviceaccount \
 --approve
 ```
 
+###上面的操作其实也是通过CloudFormation来实现的, 下面是CFT(但是不能创建ServiceAccount)
+```json
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "IAM role for serviceaccount \"kube-system/aws-load-balancer-controller\" [created and managed by eksctl]",
+  "Outputs": {
+    "Role1": {
+      "Value": {
+        "Fn::GetAtt": "Role1.Arn"
+      }
+    }
+  },
+  "Resources": {
+    "Role1": {
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "sts:AssumeRoleWithWebIdentity"
+              ],
+              "Condition": {
+                "StringEquals": {
+                  "oidc.eks.us-east-1.amazonaws.com/id/B99C2461296BD6B1EDDCA409E0E26A4D:aud": "sts.amazonaws.com",
+                  "oidc.eks.us-east-1.amazonaws.com/id/B99C2461296BD6B1EDDCA409E0E26A4D:sub": "system:serviceaccount:kube-system:aws-load-balancer-controller"
+                }
+              },
+              "Effect": "Allow",
+              "Principal": {
+                "Federated": "arn:aws:iam::609047981853:oidc-provider/oidc.eks.us-east-1.amazonaws.com/id/B99C2461296BD6B1EDDCA409E0E26A4D"
+              }
+            }
+          ],
+          "Version": "2012-10-17"
+        },
+        "ManagedPolicyArns": [
+          "arn:aws:iam::609047981853:policy/LBIAMPolicy"
+        ]
+      },
+      "Type": "AWS::IAM::Role"
+    }
+  }
+}
+```
+
 ### 设置helm repo
 ```shell
 helm repo add eks https://aws.github.io/eks-charts

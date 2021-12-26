@@ -253,7 +253,7 @@ Resources:
               - 'elasticloadbalancing:ModifyRule'
             Resource: '*'
 
-# 建议使用eksctl命令行操作
+# 建议使用eksctl命令行操作 (主要是需要手工获取ThumbprintList, 太麻烦)
 #  OIDProvider:
 #    Type: AWS::IAM::OIDCProvider
 #    Properties:
@@ -264,7 +264,7 @@ Resources:
 #        - String
 #      Url: !GetAtt EKSCluster.OpenIdConnectIssuerUrl
 
-# 建议使用eksctl命令行操作
+# 建议使用eksctl命令行操作 (主要是这个操作不能创建集群里边的ServiceAccount)
 #  LBRole:
 #    Properties:
 #      AssumeRolePolicyDocument:

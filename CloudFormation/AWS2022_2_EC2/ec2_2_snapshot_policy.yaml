@@ -88,9 +88,12 @@ Resources:
           -
             Name: "Daily Snapshots 30 Day Retention"
             TagsToAdd:
-              -
-                Key: "type"
-                Value: "DailySnapshot"
+              - Key: type
+                Value: DailySnapshot
+              - Key: timestamp
+                Value: $(timestamp)     # 变量值
+              - Key: instance-id
+                Value: $(instance-id)   # 变量值
 
             CreateRule:
               Interval: 24
@@ -120,9 +123,12 @@ Resources:
           -
             Name: "Daily Snapshots 60 Day Retention"
             TagsToAdd:
-              -
-                Key: "type"
-                Value: "DailySnapshot"
+              - Key: type
+                Value: DailySnapshot
+              - Key: timestamp
+                Value: $(timestamp)     # 变量值
+              - Key: instance-id
+                Value: $(instance-id)   # 变量值
 
             CreateRule:
               Interval: 24
@@ -152,9 +158,12 @@ Resources:
           -
             Name: "Daily Snapshots 90 Day Retention"
             TagsToAdd:
-              -
-                Key: "type"
+              - Key: type
                 Value: "DailySnapshot"
+              - Key: timestamp
+                Value: $(timestamp)     # 变量值
+              - Key: instance-id
+                Value: $(instance-id)   # 变量值
 
             CreateRule:
               Interval: 24

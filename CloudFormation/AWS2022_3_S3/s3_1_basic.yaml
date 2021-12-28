@@ -3,9 +3,12 @@ Description: AWS2022 S3 Basic
 
 Resources:
   S3Bucket:
+    # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-s3-bucket.html
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: aws2022-s3-basic
+      BucketName: aws2022-s3-basic  # 桶的名字
+      # Public访问阻止配置
+      # 下面就是默认值
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         IgnorePublicAcls: true
@@ -14,4 +17,4 @@ Resources:
       Tags:
         - Key: Department
           Value: AWS2022
-    DeletionPolicy: Retain
+    DeletionPolicy: Retain  # 建议保留, 因为要清空才能删除, CloudFormation没法删除

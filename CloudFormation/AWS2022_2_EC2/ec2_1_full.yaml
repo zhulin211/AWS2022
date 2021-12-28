@@ -26,7 +26,7 @@ Mappings:
             HVMG2: ami-061ac2e015473fbe2
 
 Resources:
-    WebServiceRole:
+    EC2ServiceRole:
         Type: "AWS::IAM::Role"
         Properties:
             RoleName: AWS2022WebServiceRole
@@ -47,7 +47,7 @@ Resources:
                 - arn:aws:iam::aws:policy/CloudWatchLogsFullAccess  # 访问CloudWatchLog
                 - arn:aws:iam::aws:policy/AmazonSSMFullAccess       # Systems Manager Agent (SSM Agent) 完整权限 [主要是登录Terminal用]
 
-    WebService:
+    EC2InstanceServiceProfile:
         # Use an instance profile to pass an IAM role to an EC2 instance
         # the console automatically creates an instance profile with the same name as the role
         # The console does not create an instance profile for a role that is not associated with Amazon EC2. 只给EC2的Role自动创建Instance Profile
@@ -56,7 +56,7 @@ Resources:
             InstanceProfileName: AWS2022WebServiceInstanceProfileName
             Path: /  # Instance Profile的放置位置
             Roles:   # 可以把多个Role放入到一个Instance Profile
-                - !Ref WebServiceRole
+                - !Ref EC2ServiceRole
 
     PlacementGroup:
         # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-ec2-placementgroup.html
@@ -90,7 +90,7 @@ Resources:
             # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-ref.html
             # 要获取非默认值, 使用 !GetAtt
             # https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-getatt.html
-            IamInstanceProfile: !Ref WebService # 关联Instance Profile
+            IamInstanceProfile: !Ref EC2InstanceServiceProfile # 关联Instance Profile
             NetworkInterfaces: # 关联网络接口
                 - NetworkInterfaceId: !Ref NetworkInterface  # 网络接口
                   DeviceIndex: 0  # 位置

@@ -20,9 +20,14 @@ def s3_empty(s3_bucket):
         s3_bucket.objects.all().delete()
 
 
-def delete_buket(buket_name):
-    s3_bucket = s3.Bucket(buket_name)
+def delete_bucket(bucket_name):
+    s3_bucket = s3.Bucket(bucket_name)
     s3_bucket.delete()
+
+
+def empty_and_delete_bucket(bucket_name):
+    s3_empty(bucket_name)
+    delete_bucket(bucket_name)
 
 
 if __name__ == '__main__':
@@ -31,6 +36,7 @@ if __name__ == '__main__':
     # s3_empty('aws2022-s3-basic')
     # delete_buket('aws2022-s3-basic')
 
-    s3_empty('aws2022-s3-pipeline')
-    delete_buket('aws2022-s3-pipeline')
+    # 删除GUI创建的S3
+    empty_and_delete_bucket('aws2022-s3-full')
+
 

@@ -1,5 +1,7 @@
 import boto3
-s3_client = boto3.client('s3')
+session = boto3.Session(profile_name='awslabuser')
+# session = boto3.Session(profile_name='default')
+s3_client = session.client('s3')
 
 
 def s3_upload(local_file, s3_bucket, dst_file):

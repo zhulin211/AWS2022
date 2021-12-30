@@ -1,0 +1,38 @@
+{
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Effect": "Allow",
+			"Principal": "*",
+			"Action": "s3:GetObject",
+			"Resource": "arn:aws:s3:::qytangaws2022s3/index.html",
+			"Condition": {
+				"StringEquals": {
+					"s3:ExistingObjectTag/web_file": "http_file"
+				}
+			}
+		},
+		{
+			"Effect": "Allow",
+			"Principal": "*",
+			"Action": "s3:GetObject",
+			"Resource": "arn:aws:s3:::qytangaws2022s3/error.html",
+			"Condition": {
+				"StringEquals": {
+					"s3:ExistingObjectTag/web_file": "http_file"
+				}
+			}
+		},
+		{
+			"Effect": "Deny",
+			"Principal": {
+				"AWS": [
+					"arn:aws:iam::609047981853:role/qytang_aws_ec2_role",
+					"arn:aws:iam::609047981853:user/aws_lab_user"
+				]
+			},
+			"Action": "s3:DeleteObject",
+			"Resource": "arn:aws:s3:::qytangaws2022s3/*"
+		}
+	]
+}

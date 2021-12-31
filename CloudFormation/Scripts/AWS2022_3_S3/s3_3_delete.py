@@ -1,6 +1,6 @@
 import boto3
-session = boto3.Session(profile_name='awslabuser')
-# session = boto3.Session(profile_name='default')
+# session = boto3.Session(profile_name='awslabuser')
+session = boto3.Session(profile_name='default')
 s3 = session.resource('s3')
 
 
@@ -39,8 +39,8 @@ if __name__ == '__main__':
     # delete_buket('aws2022-s3-basic')
 
     # 删除GUI创建的文件
-    s3_delete(['index.html', 'error.html'], 'qytangaws2022s3')
+    # s3_delete(['index.html', 'error.html'], 'qytangaws2022s3')
     # # 删除GUI创建的S3
-    # empty_and_delete_bucket('qytangaws2022s3')
+    empty_and_delete_bucket('qytangaws2022s3')
 
 

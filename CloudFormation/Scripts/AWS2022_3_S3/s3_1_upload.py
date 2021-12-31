@@ -1,6 +1,6 @@
 import boto3
-session = boto3.Session(profile_name='awslabuser')
-# session = boto3.Session(profile_name='default')
+# session = boto3.Session(profile_name='awslabuser')
+session = boto3.Session(profile_name='default')
 s3_client = session.client('s3')
 
 

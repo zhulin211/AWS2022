@@ -6,7 +6,6 @@ from CloudFormation.region import region
 # client = boto3.client('ec2', region_name="ap-southeast-2")
 client = boto3.client('ec2', region_name="us-west-1")
 
-
 def get_last_ami2():
     """
     查看镜像
